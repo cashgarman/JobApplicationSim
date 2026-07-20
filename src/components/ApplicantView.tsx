@@ -1,17 +1,17 @@
-import { SEEKER_GENERATORS, SEEKER_UPGRADES } from '../game/upgrades';
-import { getUpgradeCost } from '../game/formulas';
+import { SEEKER_LOAN_LOW_FUNDS } from '../game/constants';
 import { useGameStore } from '../store/gameStore';
-import { UpgradeButton } from './UpgradeButton';
+import { DirePanel } from './DirePanel';
+import { LoanButton } from './LoanButton';
 
 export function ApplicantView()
 {
   const state = useGameStore((s) => s.state);
   const clickApply = useGameStore((s) => s.clickApply);
-  const buyUpgrade = useGameStore((s) => s.buyUpgrade);
-  const buyGenerator = useGameStore((s) => s.buyGenerator);
+  const takeSeekerLoan = useGameStore((s) => s.takeSeekerLoan);
 
   const { seeker } = state;
   const broke = seeker.savings <= 0;
+  const desperate = seeker.savings < SEEKER_LOAN_LOW_FUNDS;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -22,57 +22,22 @@ export function ApplicantView()
           className="btn-green font-pixel w-full rounded px-3 py-4 text-xs uppercase lg:py-5 lg:text-sm"
         >
           <i className="fa-solid fa-paper-plane mr-1.5" />
-          Apply
+          Apply Into the Void
         </button>
         {broke && (
           <p className="mt-1.5 text-xs text-corp-red">
-            Savings depleted. Upgrades locked.
+            Savings depleted. The grind does not pause for bankruptcy.
           </p>
         )}
+        <LoanButton
+          side="seeker"
+          loansTaken={seeker.loansTaken}
+          desperate={desperate}
+          onTakeLoan={takeSeekerLoan}
+        />
       </div>
 
-      <div className="upgrade-scroll mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
-        <div>
-          <h3 className="font-pixel mb-1 text-xs text-corp-muted lg:text-sm">Auto-Apply Bots</h3>
-          <div className="space-y-1.5">
-            {SEEKER_GENERATORS.map((gen) => {
-              const level = seeker.generatorLevels[gen.id] ?? 0;
-              const cost = getUpgradeCost(gen.baseCost, gen.costMultiplier, level);
-              const canAfford = seeker.savings >= cost;
-              return (
-                <UpgradeButton
-                  key={gen.id}
-                  item={gen}
-                  currentLevel={level}
-                  canAfford={canAfford && !broke}
-                  onBuy={() => buyGenerator(gen.id)}
-                  isGenerator
-                />
-              );
-            })}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-pixel mb-1 text-xs text-corp-muted lg:text-sm">Resume Upgrades</h3>
-          <div className="space-y-1.5">
-            {SEEKER_UPGRADES.map((upgrade) => {
-              const level = seeker.upgradeLevels[upgrade.id] ?? 0;
-              const cost = getUpgradeCost(upgrade.baseCost, upgrade.costMultiplier, level);
-              const canAfford = seeker.savings >= cost;
-              return (
-                <UpgradeButton
-                  key={upgrade.id}
-                  item={upgrade}
-                  currentLevel={level}
-                  canAfford={canAfford && !broke}
-                  onBuy={() => buyUpgrade(upgrade.id)}
-                />
-              );
-            })}
-          </div>
-        </div>
-      </div>
+      <DirePanel side="seeker" />
     </div>
   );
 }

@@ -25,7 +25,7 @@ export function EventFeed({ compact = false }: EventFeedProps)
       <h3 className="font-pixel relative z-10 shrink-0 border-b border-corp-border bg-corp-bg/80 px-3 py-2 text-[10px] text-corp-muted backdrop-blur-[1px] lg:text-xs">
         {compact ? 'System Log' : 'Event Feed'}
       </h3>
-      <div className="relative z-10 min-h-0 flex-1 overflow-hidden px-3 py-2">
+      <div className="relative z-10 min-h-0 flex-1 overflow-hidden bg-corp-bg/55 px-3 py-2 backdrop-blur-[0.5px]">
         {visibleEvents.length === 0 ? (
           <p className="text-xs text-corp-muted italic lg:text-sm">
             Awaiting applications to shred...

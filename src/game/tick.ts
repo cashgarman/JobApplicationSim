@@ -3,6 +3,7 @@ import {
   EMPLOYER_MESSAGES,
   INITIAL_REVENUE,
   INITIAL_SAVINGS,
+  INTEREST_FEED_MESSAGES,
   NEUTRAL_MESSAGES,
   pickRandom,
 } from './constants';
@@ -12,6 +13,7 @@ import {
   clampDespair,
   getAiSpendPerSec,
   getApplicationsPerSec,
+  getInterestCharge,
   getRevenuePerSec,
   getSavingsDrainPerSec,
   rollApplicationOutcome,
@@ -49,6 +51,8 @@ export function createInitialState(): GameState
       rejections: 0,
       aiInterviews: 0,
       humanInterviews: 0,
+      debt: 0,
+      loansTaken: 0,
       upgradeLevels: {},
       generatorLevels: {},
     },
@@ -57,6 +61,8 @@ export function createInitialState(): GameState
       positionsFilled: 0,
       revenue: INITIAL_REVENUE,
       openRoles: 0,
+      debt: 0,
+      loansTaken: 0,
       upgradeLevels: {},
       generatorLevels: {},
     },
@@ -160,6 +166,75 @@ export function processApplications(state: GameState, count: number): {
   return { state: current, events };
 }
 
+function applySideDebt(
+  cash: number,
+  debt: number,
+  loansTaken: number,
+): { cash: number; debt: number; interestCharged: number; payment: number }
+{
+  if (debt <= 0)
+  {
+    return { cash, debt, interestCharged: 0, payment: 0 };
+  }
+
+  const interestCharged = getInterestCharge(debt, loansTaken);
+  let nextDebt = debt + interestCharged;
+  const payment = Math.min(cash, interestCharged);
+  const nextCash = cash - payment;
+  nextDebt = Math.max(0, nextDebt - payment);
+
+  return {
+    cash: nextCash,
+    debt: nextDebt,
+    interestCharged,
+    payment,
+  };
+}
+
+export function applyDebtTick(state: GameState): {
+  state: GameState;
+  events: FeedEvent[];
+}
+{
+  const events: FeedEvent[] = [];
+  const seekerDebt = applySideDebt(
+    state.seeker.savings,
+    state.seeker.debt,
+    state.seeker.loansTaken,
+  );
+  const employerDebt = applySideDebt(
+    state.employer.revenue,
+    state.employer.debt,
+    state.employer.loansTaken,
+  );
+
+  if (seekerDebt.interestCharged > 0 && Math.random() < 0.04)
+  {
+    events.push(createFeedEvent(pickRandom(INTEREST_FEED_MESSAGES), 'neutral'));
+  }
+  if (employerDebt.interestCharged > 0 && Math.random() < 0.04)
+  {
+    events.push(createFeedEvent(pickRandom(INTEREST_FEED_MESSAGES), 'employer'));
+  }
+
+  return {
+    state: {
+      ...state,
+      seeker: {
+        ...state.seeker,
+        savings: seekerDebt.cash,
+        debt: seekerDebt.debt,
+      },
+      employer: {
+        ...state.employer,
+        revenue: employerDebt.cash,
+        debt: employerDebt.debt,
+      },
+    },
+    events,
+  };
+}
+
 export function tickGame(state: GameState): {
   state: GameState;
   events: FeedEvent[];
@@ -212,6 +287,10 @@ export function tickGame(state: GameState): {
   {
     events.push(createFeedEvent(pickRandom(NEUTRAL_MESSAGES), 'neutral'));
   }
+
+  const { state: afterDebt, events: debtEvents } = applyDebtTick(current);
+  current = afterDebt;
+  events.push(...debtEvents);
 
   current = checkGameOver(applyDespairTick(current));
 

@@ -135,6 +135,10 @@ console.log({
   positionsFilled: state.employer.positionsFilled,
   seekerDespair: state.seekerDespair.toFixed(1),
   employerDespair: state.employerDespair.toFixed(1),
+  seekerDebt: Math.floor(state.seeker.debt),
+  employerDebt: Math.floor(state.employer.debt),
+  seekerLoans: state.seeker.loansTaken,
+  employerLoans: state.employer.loansTaken,
   phase: state.phase,
   gameOverCause: state.gameOverCause,
 });

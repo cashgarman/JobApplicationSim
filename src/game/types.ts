@@ -12,6 +12,8 @@ export interface SeekerState {
   rejections: number;
   aiInterviews: number;
   humanInterviews: number;
+  debt: number;
+  loansTaken: number;
   upgradeLevels: Record<string, number>;
   generatorLevels: Record<string, number>;
 }
@@ -21,6 +23,8 @@ export interface EmployerState {
   positionsFilled: number;
   revenue: number;
   openRoles: number;
+  debt: number;
+  loansTaken: number;
   upgradeLevels: Record<string, number>;
   generatorLevels: Record<string, number>;
 }

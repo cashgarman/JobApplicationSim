@@ -92,11 +92,10 @@ export function AILayerColumn()
           />
         </div>
 
-        <div className="flex shrink-0 flex-col items-center justify-center gap-1.5 py-3 text-center">
-          <i className="fa-solid fa-chart-line text-3xl text-corp-green opacity-90 lg:text-4xl" />
+        <div className="flex shrink-0 flex-col items-center justify-center gap-1.5 border-y border-corp-border/50 py-3 text-center">
+          <i className="fa-solid fa-scale-unbalanced text-2xl text-corp-amber opacity-90 lg:text-3xl" />
           <p className="text-xs text-corp-muted lg:text-sm">
-            <i className="fa-solid fa-coins mr-1 text-corp-green" />
-            The worse it gets, the more we earn
+            Seekers apply. Employers post. Agencies profit. Humanity optional.
           </p>
         </div>
 

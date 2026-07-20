@@ -2,6 +2,16 @@ export const DESPAIR_MAX = 100;
 export const SEEKER_DESPAIR_PER_SEC = 0.12;
 export const EMPLOYER_DESPAIR_PER_SEC = 0.1;
 
+export const SEEKER_LOAN_AMOUNT = 2500;
+export const EMPLOYER_LOAN_AMOUNT = 5000;
+export const BASE_LOAN_INTEREST_PER_SEC = 0.0015;
+export const LOAN_INTEREST_ESCALATION = 0.25;
+export const DEBT_DESPAIR_REFERENCE = 10000;
+export const DEBT_DESPAIR_PER_SEC = 0.04;
+export const SEEKER_LOAN_LOW_FUNDS = 1000;
+export const EMPLOYER_LOAN_LOW_FUNDS = 2000;
+export const LOAN_DESPAIR_BUMP = 0.5;
+
 export const INITIAL_SAVINGS = 5000;
 export const INITIAL_REVENUE = 10000;
 export const BASE_SAVINGS_DRAIN_PER_SEC = 0.5;
@@ -92,6 +102,27 @@ export const NEUTRAL_MESSAGES = [
   "Another day, another application black hole.",
   "Somewhere, a human wants to hire a human. The AI won't allow it.",
   "Cost savings achieved. Humanity optional.",
+];
+
+export const SEEKER_LOAN_MESSAGES = [
+  'Loan approved! APR: 847%. Your future self thanks you.',
+  'Emergency credit extended. Interest is our love language.',
+  'Personal loan disbursed. Dignity sold separately.',
+  'Bridge loan secured. The bridge is collapsing.',
+];
+
+export const EMPLOYER_LOAN_MESSAGES = [
+  'Bridge financing secured. Bridge is on fire.',
+  'Credit line opened. Burn rate now includes interest.',
+  'Working capital loan approved. Capital stopped working years ago.',
+  'Corporate credit extended. Shareholders not informed.',
+];
+
+export const INTEREST_FEED_MESSAGES = [
+  'Interest charged. Compounding is a feature.',
+  'Minimum payment missed. Debt appreciates your optimism.',
+  'APR applied. Math is undefeated.',
+  'Servicing debt. Servitude included at no extra charge.',
 ];
 
 export function pickRandom<T>(arr: T[]): T

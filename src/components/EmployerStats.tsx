@@ -34,17 +34,22 @@ export function EmployerStats()
   return (
     <div className="rounded border border-corp-green/50 bg-corp-panel p-3">
       <StatRow
-        label="AI Spend"
+        label="AI Money Burned"
         value={formatCurrency(employer.aiRecruitmentSpend)}
         highlight="red"
       />
       <StatRow
-        label="Positions Filled"
+        label="Roles Actually Filled"
         value={formatNumber(employer.positionsFilled)}
-        highlight="green"
+        highlight={employer.positionsFilled > 0 ? 'green' : 'red'}
       />
-      <StatRow label="Revenue" value={formatCurrency(employer.revenue)} />
-      <StatRow label="Open Roles" value={formatNumber(employer.openRoles)} />
+      <StatRow label="Revenue (Shrinking)" value={formatCurrency(employer.revenue)} />
+      <StatRow
+        label="Debt"
+        value={formatCurrency(employer.debt)}
+        highlight={employer.debt > 0 ? 'red' : undefined}
+      />
+      <StatRow label="Open Roles (Growing)" value={formatNumber(employer.openRoles)} highlight="amber" />
     </div>
   );
 }

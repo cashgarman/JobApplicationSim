@@ -9,8 +9,9 @@ export function StartScreen()
       <h1 className="font-pixel mb-4 text-lg leading-relaxed text-corp-text sm:text-xl">
         Job Application Simulator
       </h1>
-      <p className="mb-8 max-w-md text-corp-muted italic">
-        &quot;Perfect resume. Zero humanity. Please hold.&quot;
+      <p className="mb-8 max-w-lg text-sm text-corp-muted italic">
+        Two sides of the same broken market. Job seekers drown in rejections.
+        Employers drown in spend. Recruitment agencies bill everyone.
       </p>
       <button
         type="button"

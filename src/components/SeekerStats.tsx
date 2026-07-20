@@ -38,9 +38,14 @@ export function SeekerStats()
         value={formatCurrency(seeker.savings)}
         highlight={seeker.savings < 500 ? 'red' : undefined}
       />
-      <StatRow label="Applications" value={formatNumber(seeker.applications)} />
-      <StatRow label="Rejections" value={formatNumber(seeker.rejections)} highlight="red" />
-      <StatRow label="AI Interviews" value={formatNumber(seeker.aiInterviews)} highlight="amber" />
+      <StatRow
+        label="Debt"
+        value={formatCurrency(seeker.debt)}
+        highlight={seeker.debt > 0 ? 'red' : undefined}
+      />
+      <StatRow label="Applications Sent" value={formatNumber(seeker.applications)} />
+      <StatRow label="Rejections Received" value={formatNumber(seeker.rejections)} highlight="red" />
+      <StatRow label="AI Interviews Survived" value={formatNumber(seeker.aiInterviews)} highlight="amber" />
       <StatRow
         label="Human Interviews"
         value={formatNumber(seeker.humanInterviews)}

@@ -48,7 +48,7 @@ export function Layout()
               Job Application Simulator
             </h1>
             <p className="truncate text-xs text-corp-muted italic sm:text-sm">
-              Perfect resume. Zero humanity. Please hold.
+              Everyone loses. The middlemen get paid.
             </p>
           </div>
           <button

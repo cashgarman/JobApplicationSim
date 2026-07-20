@@ -22,6 +22,19 @@ function migrateState(raw: Record<string, unknown>): GameState
     merged.phase = 'start';
   }
 
+  merged.seeker = {
+    ...initial.seeker,
+    ...merged.seeker,
+    debt: merged.seeker?.debt ?? 0,
+    loansTaken: merged.seeker?.loansTaken ?? 0,
+  };
+  merged.employer = {
+    ...initial.employer,
+    ...merged.employer,
+    debt: merged.employer?.debt ?? 0,
+    loansTaken: merged.employer?.loansTaken ?? 0,
+  };
+
   delete merged.humanConnection;
 
   return merged;

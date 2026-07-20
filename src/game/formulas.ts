@@ -4,8 +4,12 @@ import {
   AI_INTERVIEW_FAIL_RATE,
   AI_INTERVIEW_MESSAGES,
   BASE_ATS,
+  DEBT_DESPAIR_PER_SEC,
+  DEBT_DESPAIR_REFERENCE,
   DESPAIR_MAX,
+  BASE_LOAN_INTEREST_PER_SEC,
   EMPLOYER_DESPAIR_PER_SEC,
+  LOAN_INTEREST_ESCALATION,
   HUMAN_INTERVIEW_FAIL_MESSAGES,
   HUMAN_INTERVIEW_FILL_RATE,
   HUMAN_INTERVIEW_MESSAGES,
@@ -66,17 +70,48 @@ export function clampDespair(value: number): number
   return clamp(value, 0, DESPAIR_MAX);
 }
 
+export function getLoanInterestRate(loansTaken: number): number
+{
+  return BASE_LOAN_INTEREST_PER_SEC * (1 + LOAN_INTEREST_ESCALATION * loansTaken);
+}
+
+export function getInterestCharge(debt: number, loansTaken: number): number
+{
+  if (debt <= 0)
+  {
+    return 0;
+  }
+  return debt * getLoanInterestRate(loansTaken);
+}
+
+export function formatLoanApr(loansTaken: number): string
+{
+  const annualized = getLoanInterestRate(loansTaken) * 365 * 24 * 3600 * 100;
+  return `${Math.floor(annualized)}%`;
+}
+
+export function getDebtDespairBonus(debt: number): number
+{
+  if (debt <= 0)
+  {
+    return 0;
+  }
+  return DEBT_DESPAIR_PER_SEC * (debt / DEBT_DESPAIR_REFERENCE);
+}
+
 export function getPassiveDespairGain(state: GameState): { seeker: number; employer: number }
 {
   return {
     seeker:
       SEEKER_DESPAIR_PER_SEC
       + state.seeker.applications * 0.00008
-      + state.seeker.rejections * 0.00003,
+      + state.seeker.rejections * 0.00003
+      + getDebtDespairBonus(state.seeker.debt),
     employer:
       EMPLOYER_DESPAIR_PER_SEC
       + state.employer.openRoles * 0.006
-      + state.employer.aiRecruitmentSpend * 0.000025,
+      + state.employer.aiRecruitmentSpend * 0.000025
+      + getDebtDespairBonus(state.employer.debt),
   };
 }
 

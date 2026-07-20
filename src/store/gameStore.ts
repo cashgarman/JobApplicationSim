@@ -1,7 +1,15 @@
 import { create } from 'zustand';
 import type { FeedEvent, GameState, Perspective } from '../game/types';
+import {
+  EMPLOYER_LOAN_AMOUNT,
+  EMPLOYER_LOAN_MESSAGES,
+  LOAN_DESPAIR_BUMP,
+  SEEKER_LOAN_AMOUNT,
+  SEEKER_LOAN_MESSAGES,
+  pickRandom,
+} from '../game/constants';
 import { getGeneratorById, getUpgradeById } from '../game/upgrades';
-import { getUpgradeCost, checkGameOver } from '../game/formulas';
+import { getUpgradeCost, checkGameOver, clampDespair } from '../game/formulas';
 import { createFeedEvent, createInitialState, processApplication, tickGame } from '../game/tick';
 import { getInitialState, saveGame } from '../game/save';
 import { useAnimationStore } from './animationStore';
@@ -18,6 +26,8 @@ interface GameStore
   clickPostRole: () => void;
   buyUpgrade: (upgradeId: string) => void;
   buyGenerator: (generatorId: string) => void;
+  takeSeekerLoan: () => void;
+  takeEmployerLoan: () => void;
   tick: () => void;
   resetGame: () => void;
 }
@@ -259,6 +269,56 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const feedEvents = addFeedEvents(store.feedEvents, [
       createFeedEvent(`Hired: ${generator.name}`, side === 'employer' ? 'employer' : 'neutral'),
+    ]);
+    persist(state);
+    set({ state, feedEvents });
+  },
+
+  takeSeekerLoan: () =>
+  {
+    const store = get();
+    if (store.state.phase !== 'playing')
+    {
+      return;
+    }
+
+    const state = checkGameOver({
+      ...store.state,
+      seeker: {
+        ...store.state.seeker,
+        savings: store.state.seeker.savings + SEEKER_LOAN_AMOUNT,
+        debt: store.state.seeker.debt + SEEKER_LOAN_AMOUNT,
+        loansTaken: store.state.seeker.loansTaken + 1,
+      },
+      seekerDespair: clampDespair(store.state.seekerDespair + LOAN_DESPAIR_BUMP),
+    });
+    const feedEvents = addFeedEvents(store.feedEvents, [
+      createFeedEvent(pickRandom(SEEKER_LOAN_MESSAGES), 'neutral'),
+    ]);
+    persist(state);
+    set({ state, feedEvents });
+  },
+
+  takeEmployerLoan: () =>
+  {
+    const store = get();
+    if (store.state.phase !== 'playing')
+    {
+      return;
+    }
+
+    const state = checkGameOver({
+      ...store.state,
+      employer: {
+        ...store.state.employer,
+        revenue: store.state.employer.revenue + EMPLOYER_LOAN_AMOUNT,
+        debt: store.state.employer.debt + EMPLOYER_LOAN_AMOUNT,
+        loansTaken: store.state.employer.loansTaken + 1,
+      },
+      employerDespair: clampDespair(store.state.employerDespair + LOAN_DESPAIR_BUMP),
+    });
+    const feedEvents = addFeedEvents(store.feedEvents, [
+      createFeedEvent(pickRandom(EMPLOYER_LOAN_MESSAGES), 'employer'),
     ]);
     persist(state);
     set({ state, feedEvents });
