@@ -12,10 +12,53 @@ export const SEEKER_LOAN_LOW_FUNDS = 1000;
 export const EMPLOYER_LOAN_LOW_FUNDS = 2000;
 export const LOAN_DESPAIR_BUMP = 0.5;
 
+export const DESPAIR_FLAVOR_TIERS: { min: number; messages: string[] }[] = [
+  {
+    min: 0,
+    messages: [
+      'The market is open. So is the wound.',
+      'Everyone is hiring. Nobody is hiring you.',
+      'Optimism detected. Please disable.',
+    ],
+  },
+  {
+    min: 25,
+    messages: [
+      'Rejections are trending upward.',
+      'The ATS is warming up.',
+      'Hope is still refundable. Barely.',
+    ],
+  },
+  {
+    min: 50,
+    messages: [
+      'Morale is a line item now.',
+      'Both sides are bleeding money.',
+      'Agencies report record engagement.',
+    ],
+  },
+  {
+    min: 75,
+    messages: [
+      'Systems failing. Invoices still deliver.',
+      'Human connection: packet loss.',
+      'This is fine. This is all fine.',
+    ],
+  },
+  {
+    min: 90,
+    messages: [
+      'TOTAL MARKET COLLAPSE IMMINENT',
+      'NO WINNERS. ONLY SUBSCRIPTIONS.',
+      'PLEASE HOLD. NO ONE IS COMING.',
+    ],
+  },
+];
+
 export const INITIAL_SAVINGS = 5000;
 export const INITIAL_REVENUE = 10000;
 export const BASE_SAVINGS_DRAIN_PER_SEC = 0.5;
-export const BASE_REVENUE_PER_SEC = 2;
+export const BASE_REVENUE_DRAIN_PER_SEC = 1;
 export const REVENUE_PENALTY_PER_OPEN_ROLE = 0.05;
 
 export const BASE_ATS = 1;

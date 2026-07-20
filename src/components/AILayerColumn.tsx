@@ -35,20 +35,20 @@ export function AILayerColumn()
 
   return (
     <div
-      className={`column-panel relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded border p-2 lg:p-3 ${
+      className={`column-panel relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded border bg-corp-panel p-2 lg:p-3 ${
         thriving
-          ? 'border-corp-green/50 bg-corp-panel agency-profit-glow'
-          : 'border-corp-amber/40 bg-corp-panel'
+          ? 'border-corp-green/50 agency-profit-glow'
+          : 'border-corp-amber/40'
       }`}
     >
-      <FloatingTextLayer column="ai" />
+      <div className="pointer-events-none absolute inset-0 rounded bg-red-500/30" />
       <div className="relative z-10 flex h-full min-h-0 flex-col">
         <div className="shrink-0 text-center">
           <div className="agency-icon mb-1 inline-block">
             <i className="fa-solid fa-hand-holding-dollar text-2xl text-corp-green lg:text-3xl" />
           </div>
-          <h2 className="font-pixel text-[10px] text-corp-amber lg:text-xs">Recruitment Agencies</h2>
-          <p className="text-[10px] text-corp-green lg:text-xs">profiting from failure</p>
+          <h2 className="font-pixel text-xs text-corp-amber lg:text-sm">Recruitment Agencies</h2>
+          <p className="text-sm text-corp-green lg:text-base">profiting from failure</p>
         </div>
 
         <div className="mt-2 shrink-0 rounded border border-corp-border bg-corp-bg p-3 text-xs lg:text-sm">
@@ -103,6 +103,7 @@ export function AILayerColumn()
           <EventFeed compact />
         </div>
       </div>
+      <FloatingTextLayer column="ai" />
     </div>
   );
 }

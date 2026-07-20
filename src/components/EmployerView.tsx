@@ -18,14 +18,10 @@ export function EmployerView()
         <button
           type="button"
           onClick={clickPostRole}
-          className="btn-green font-pixel w-full rounded px-3 py-4 text-xs uppercase lg:py-5 lg:text-sm"
+          className="btn-green font-pixel w-full rounded px-2 py-4 text-[11px] leading-tight uppercase sm:text-[12px] lg:py-5 lg:text-[13px]"
         >
-          <i className="fa-solid fa-briefcase mr-1.5" />
           Post Another Role
         </button>
-        <p className="mt-1.5 text-xs text-corp-muted">
-          {employer.openRoles} open — {employer.positionsFilled} filled. The math is not mathing.
-        </p>
         <LoanButton
           side="employer"
           loansTaken={employer.loansTaken}

@@ -133,4 +133,11 @@ export interface FloatText {
   text: string;
   tone: FloatTextTone;
   createdAt: number;
+  offsetX: number;
+  startBottom: number;
+  duration: number;
+  delay: number;
+  driftX: number;
+  riseY: number;
+  scale: number;
 }

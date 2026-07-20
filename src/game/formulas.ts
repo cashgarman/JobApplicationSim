@@ -4,10 +4,12 @@ import {
   AI_INTERVIEW_FAIL_RATE,
   AI_INTERVIEW_MESSAGES,
   BASE_ATS,
+  BASE_LOAN_INTEREST_PER_SEC,
+  BASE_REVENUE_DRAIN_PER_SEC,
+  BASE_SAVINGS_DRAIN_PER_SEC,
   DEBT_DESPAIR_PER_SEC,
   DEBT_DESPAIR_REFERENCE,
   DESPAIR_MAX,
-  BASE_LOAN_INTEREST_PER_SEC,
   EMPLOYER_DESPAIR_PER_SEC,
   LOAN_INTEREST_ESCALATION,
   HUMAN_INTERVIEW_FAIL_MESSAGES,
@@ -291,29 +293,30 @@ export function getApplicationsPerSec(state: GameState): number
 
 export function getSavingsDrainPerSec(state: GameState): number
 {
-  let drain = 0.5;
+  let drain = BASE_SAVINGS_DRAIN_PER_SEC;
   for (const upgrade of SEEKER_UPGRADES)
   {
     const level = getSeekerUpgradeLevel(state.seeker, upgrade.id);
     drain += level * (upgrade.effects.savingsDrainPerSec ?? 0);
   }
+  drain += state.seeker.debt * 0.00002;
   return drain;
 }
 
-export function getRevenuePerSec(state: GameState): number
+export function getRevenueDrainPerSec(state: GameState): number
 {
-  let revenue = 2;
-  const vacancyPenalty = state.employer.openRoles * 0.05;
-  revenue = Math.max(0.1, revenue - vacancyPenalty);
+  let drain = BASE_REVENUE_DRAIN_PER_SEC;
+  drain += state.employer.openRoles * 0.08;
+  drain += state.employer.aiRecruitmentSpend * 0.000015;
 
   for (const upgrade of EMPLOYER_UPGRADES)
   {
     const level = getEmployerUpgradeLevel(state.employer, upgrade.id);
-    revenue += level * (upgrade.effects.revenuePerSec ?? 0);
-    revenue -= level * (upgrade.effects.revenuePenalty ?? 0);
+    drain += level * (upgrade.effects.revenuePenalty ?? 0);
   }
 
-  return Math.max(0.1, revenue);
+  drain += state.employer.debt * 0.00002;
+  return drain;
 }
 
 export function getAiSpendPerSec(state: GameState): number

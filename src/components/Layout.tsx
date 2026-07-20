@@ -4,6 +4,7 @@ import { useAnimationStore } from '../store/animationStore';
 import { AILayerColumn } from './AILayerColumn';
 import { EmployerColumn } from './EmployerColumn';
 import { DespairBars } from './DespairBars';
+import { DespairFlavorTicker } from './DespairFlavorTicker';
 import { PipelineOverlay } from './PipelineOverlay';
 import { SeekerColumn } from './SeekerColumn';
 
@@ -42,8 +43,8 @@ export function Layout()
   return (
     <div className="app-shell flex h-screen flex-col overflow-hidden bg-corp-bg">
       <header className="shrink-0 border-b border-corp-border bg-corp-panel px-4 py-2">
-        <div className="mx-auto flex max-w-[100vw] items-center justify-between gap-3">
-          <div className="min-w-0">
+        <div className="mx-auto grid max-w-[100vw] grid-cols-3 items-center gap-3">
+          <div className="min-w-0 justify-self-start">
             <h1 className="font-pixel truncate text-xs text-corp-text sm:text-sm">
               Job Application Simulator
             </h1>
@@ -51,10 +52,13 @@ export function Layout()
               Everyone loses. The middlemen get paid.
             </p>
           </div>
+          <div className="min-w-0 justify-self-center px-2">
+            <DespairFlavorTicker />
+          </div>
           <button
             type="button"
             onClick={handleReset}
-            className="shrink-0 rounded border border-corp-border px-3 py-1.5 text-xs text-corp-muted hover:text-corp-red"
+            className="shrink-0 justify-self-end rounded border border-corp-border px-3 py-1.5 text-xs text-corp-muted hover:text-corp-red"
             title="Reset save"
           >
             Reset

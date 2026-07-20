@@ -92,6 +92,22 @@ function addFloat(texts: FloatText[], text: FloatText): FloatText[]
   return [text, ...texts].slice(0, MAX_FLOAT_TEXTS);
 }
 
+function createFloatVariation(): Pick<
+  FloatText,
+  'offsetX' | 'startBottom' | 'duration' | 'delay' | 'driftX' | 'riseY' | 'scale'
+>
+{
+  return {
+    offsetX: randomBetween(-45, 45),
+    startBottom: randomBetween(12, 58),
+    duration: randomBetween(1.3, 2.6),
+    delay: randomBetween(0, 0.35),
+    driftX: randomBetween(-30, 30),
+    riseY: randomBetween(-55, -95),
+    scale: randomBetween(0.85, 1.2),
+  };
+}
+
 function spawnFloat(
   texts: FloatText[],
   column: FloatTextColumn,
@@ -105,6 +121,7 @@ function spawnFloat(
     text: override ?? pickFloat(column, tone),
     tone,
     createdAt: Date.now(),
+    ...createFloatVariation(),
   });
 }
 

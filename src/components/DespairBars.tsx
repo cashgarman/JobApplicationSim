@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { DESPAIR_MAX } from '../game/constants';
 import { useGameStore } from '../store/gameStore';
 
@@ -21,15 +22,12 @@ function DespairBar({
   return (
     <div className="min-w-0 flex-1">
       <div
-        className={`mb-1 flex items-center justify-between gap-2 ${
-          alignLabel === 'right' ? 'flex-row-reverse' : ''
+        className={`mb-1 flex items-center ${
+          alignLabel === 'right' ? 'justify-end' : 'justify-start'
         }`}
       >
         <span className="font-pixel truncate text-[9px] text-corp-muted lg:text-[10px]">
           {label}
-        </span>
-        <span className={`shrink-0 text-[9px] lg:text-[10px] ${isCritical ? 'text-corp-red' : 'text-corp-muted'}`}>
-          {Math.floor(value)}%
         </span>
       </div>
       <div
@@ -50,13 +48,31 @@ export function DespairBars()
 {
   const seekerDespair = useGameStore((s) => s.state.seekerDespair);
   const employerDespair = useGameStore((s) => s.state.employerDespair);
+  const [isHit, setIsHit] = useState(false);
+  const previousDespair = useRef({ seeker: seekerDespair, employer: employerDespair });
+
+  useEffect(() =>
+  {
+    const seekerGained = seekerDespair > previousDespair.current.seeker;
+    const employerGained = employerDespair > previousDespair.current.employer;
+
+    if (seekerGained || employerGained)
+    {
+      setIsHit(true);
+      const timeout = setTimeout(() => setIsHit(false), 700);
+      previousDespair.current = { seeker: seekerDespair, employer: employerDespair };
+      return () => clearTimeout(timeout);
+    }
+
+    previousDespair.current = { seeker: seekerDespair, employer: employerDespair };
+  }, [seekerDespair, employerDespair]);
+
+  const peakDespair = Math.max(seekerDespair, employerDespair);
+  const isCritical = peakDespair >= 85;
 
   return (
     <div className="rounded border border-corp-border bg-corp-panel px-3 py-2.5">
-      <p className="font-pixel mb-2 text-center text-[9px] text-corp-red lg:text-[10px]">
-        Despair Meter — rising inevitably
-      </p>
-      <div className="flex items-stretch gap-1 sm:gap-2">
+      <div className="flex items-end gap-2">
         <DespairBar
           label="Job Seeker"
           value={seekerDespair}
@@ -64,7 +80,15 @@ export function DespairBars()
           fillDirection="ltr"
           alignLabel="left"
         />
-        <div className="w-px shrink-0 self-stretch bg-corp-border/80" aria-hidden />
+        <div className="flex shrink-0 flex-col items-center justify-end self-stretch px-1 pb-0.5">
+          <span
+            className={`despair-label font-pixel text-[9px] lg:text-[10px] ${
+              isHit ? 'despair-label-hit' : ''
+            } ${isCritical ? 'text-corp-red' : 'text-corp-muted'}`}
+          >
+            DISPAIR
+          </span>
+        </div>
         <DespairBar
           label="Employer"
           value={employerDespair}

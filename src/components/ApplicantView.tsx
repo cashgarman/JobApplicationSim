@@ -19,9 +19,8 @@ export function ApplicantView()
         <button
           type="button"
           onClick={clickApply}
-          className="btn-green font-pixel w-full rounded px-3 py-4 text-xs uppercase lg:py-5 lg:text-sm"
+          className="btn-green font-pixel w-full rounded px-2 py-4 text-[11px] leading-tight uppercase sm:text-[12px] lg:py-5 lg:text-[13px]"
         >
-          <i className="fa-solid fa-paper-plane mr-1.5" />
           Apply Into the Void
         </button>
         {broke && (

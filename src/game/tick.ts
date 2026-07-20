@@ -14,7 +14,7 @@ import {
   getAiSpendPerSec,
   getApplicationsPerSec,
   getInterestCharge,
-  getRevenuePerSec,
+  getRevenueDrainPerSec,
   getSavingsDrainPerSec,
   rollApplicationOutcome,
 } from './formulas';
@@ -260,13 +260,13 @@ export function tickGame(state: GameState): {
     },
   };
 
-  const revenueGain = getRevenuePerSec(current);
+  const revenueDrain = getRevenueDrainPerSec(current);
   const aiSpend = getAiSpendPerSec(current);
   current = {
     ...current,
     employer: {
       ...current.employer,
-      revenue: current.employer.revenue + revenueGain,
+      revenue: Math.max(0, current.employer.revenue - revenueDrain),
       aiRecruitmentSpend: current.employer.aiRecruitmentSpend + aiSpend,
     },
   };

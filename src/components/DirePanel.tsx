@@ -54,6 +54,11 @@ function getEmployerLines(employer: {
     employer.positionsFilled > 0
       ? `${employer.positionsFilled} hire(s) made. The pipeline still feels broken.`
       : 'Positions filled: statistically embarrassing.',
+    employer.revenue <= 0
+      ? 'Revenue: gone. Open roles remain. Classic.'
+      : employer.revenue < 2000
+        ? 'Company revenue is bleeding out faster than you can hire.'
+        : 'Every day without a hire costs money you are not making back.',
     employer.aiRecruitmentSpend > 0
       ? `$${Math.floor(employer.aiRecruitmentSpend).toLocaleString()} spent on AI recruiting. ROI: vibes.`
       : 'AI vendors are waiting to solve a problem they created.',
