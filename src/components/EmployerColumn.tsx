@@ -1,7 +1,9 @@
 import { DirePanel } from './DirePanel';
+import { DespairActionButton } from './DespairActionButton';
 import { EmployerStats } from './EmployerStats';
 import { FloatingTextLayer } from './FloatingTextLayer';
 import { LoanButton } from './LoanButton';
+import { getLoanOverlapProgress } from '../game/actionLabels';
 import { useDismalFlash } from '../hooks/useDismalFlash';
 import { useGameStore } from '../store/gameStore';
 
@@ -12,6 +14,7 @@ export function EmployerColumn()
   const clickPostRole = useGameStore((s) => s.clickPostRole);
   const takeEmployerLoan = useGameStore((s) => s.takeEmployerLoan);
   const { employer } = state;
+  const buried = getLoanOverlapProgress(state.employerDespair) >= 0.95;
 
   return (
     <div
@@ -31,13 +34,12 @@ export function EmployerColumn()
           <EmployerStats />
         </div>
         <div className="side-column-actions mt-2 shrink-0 text-center">
-          <button
-            type="button"
+          <DespairActionButton
+            side="employer"
+            despair={state.employerDespair}
+            buried={buried}
             onClick={clickPostRole}
-            className="btn-green side-column-primary-btn font-pixel rounded"
-          >
-            Post Another Role
-          </button>
+          />
           <LoanButton
             side="employer"
             loansTaken={employer.loansTaken}

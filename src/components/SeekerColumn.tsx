@@ -1,7 +1,9 @@
 import { DirePanel } from './DirePanel';
+import { DespairActionButton } from './DespairActionButton';
 import { FloatingTextLayer } from './FloatingTextLayer';
 import { LoanButton } from './LoanButton';
 import { SeekerStats } from './SeekerStats';
+import { getLoanOverlapProgress } from '../game/actionLabels';
 import { useDismalFlash } from '../hooks/useDismalFlash';
 import { useGameStore } from '../store/gameStore';
 
@@ -13,6 +15,7 @@ export function SeekerColumn()
   const takeSeekerLoan = useGameStore((s) => s.takeSeekerLoan);
   const { seeker } = state;
   const broke = seeker.savings <= 0;
+  const buried = getLoanOverlapProgress(state.seekerDespair) >= 0.95;
 
   return (
     <div
@@ -32,13 +35,12 @@ export function SeekerColumn()
           <SeekerStats />
         </div>
         <div className="side-column-actions mt-2 shrink-0 text-center">
-          <button
-            type="button"
+          <DespairActionButton
+            side="seeker"
+            despair={state.seekerDespair}
+            buried={buried}
             onClick={clickApply}
-            className="btn-green side-column-primary-btn font-pixel rounded"
-          >
-            Apply Into the Void
-          </button>
+          />
           {broke && (
             <p className="mt-1.5 text-xs text-corp-red">
               Savings depleted. The grind does not pause for bankruptcy.

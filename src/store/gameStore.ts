@@ -8,7 +8,7 @@ import {
   pickRandom,
 } from '../game/constants';
 import { getGeneratorById, getUpgradeById } from '../game/upgrades';
-import { getUpgradeCost, checkGameOver, clampDespair, getLoanDespairRelief } from '../game/formulas';
+import { getUpgradeCost, checkGameOver, clampDespair, getLoanPrincipal, getScaledEmployerDespairDelta } from '../game/formulas';
 import { createFeedEvent, createInitialState, processApplication, tickGame } from '../game/tick';
 import { processPendingRolePosts, scheduleRolePost } from '../game/rolePost';
 import type { PendingRolePost } from '../game/rolePost';
@@ -123,7 +123,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
         openRoles,
         revenue: store.state.employer.revenue + 5,
       },
-      employerDespair: Math.min(100, store.state.employerDespair + 1.5),
+      employerDespair: clampDespair(
+        store.state.employerDespair + getScaledEmployerDespairDelta(store.state, 1.5),
+      ),
     });
     const feedEvents = addFeedEvents(store.feedEvents, [
       createFeedEvent(
@@ -291,16 +293,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    const despairRelief = getLoanDespairRelief(store.state.seeker.loansTaken);
+    const loanAmount = getLoanPrincipal(SEEKER_LOAN_AMOUNT, store.state.seeker.loansTaken);
     const state = checkGameOver({
       ...store.state,
       seeker: {
         ...store.state.seeker,
-        savings: store.state.seeker.savings + SEEKER_LOAN_AMOUNT,
-        debt: store.state.seeker.debt + SEEKER_LOAN_AMOUNT,
+        savings: store.state.seeker.savings + loanAmount,
+        debt: store.state.seeker.debt + loanAmount,
         loansTaken: store.state.seeker.loansTaken + 1,
       },
-      seekerDespair: clampDespair(store.state.seekerDespair - despairRelief),
+      seekerDespair: 0,
     });
     const feedEvents = addFeedEvents(store.feedEvents, [
       createFeedEvent(pickRandom(SEEKER_LOAN_MESSAGES), 'seeker'),
@@ -317,16 +319,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    const despairRelief = getLoanDespairRelief(store.state.employer.loansTaken);
+    const loanAmount = getLoanPrincipal(EMPLOYER_LOAN_AMOUNT, store.state.employer.loansTaken);
     const state = checkGameOver({
       ...store.state,
       employer: {
         ...store.state.employer,
-        revenue: store.state.employer.revenue + EMPLOYER_LOAN_AMOUNT,
-        debt: store.state.employer.debt + EMPLOYER_LOAN_AMOUNT,
+        revenue: store.state.employer.revenue + loanAmount,
+        debt: store.state.employer.debt + loanAmount,
         loansTaken: store.state.employer.loansTaken + 1,
       },
-      employerDespair: clampDespair(store.state.employerDespair - despairRelief),
+      employerDespair: 0,
     });
     const feedEvents = addFeedEvents(store.feedEvents, [
       createFeedEvent(pickRandom(EMPLOYER_LOAN_MESSAGES), 'employer'),

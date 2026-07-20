@@ -14,6 +14,8 @@ import {
   getRevenueDrainPerSec,
   getSavingsDrainPerSec,
   rollApplicationOutcome,
+  getScaledEmployerDespairDelta,
+  getScaledSeekerDespairDelta,
 } from './formulas';
 
 let eventCounter = 0;
@@ -73,8 +75,12 @@ function applyOutcome(state: GameState, result: OutcomeResult): GameState
 {
   const seeker = { ...state.seeker };
   const employer = { ...state.employer };
-  let seekerDespair = clampDespair(state.seekerDespair + result.seekerDespairGain);
-  let employerDespair = clampDespair(state.employerDespair + result.employerDespairGain);
+  let seekerDespair = clampDespair(
+    state.seekerDespair + getScaledSeekerDespairDelta(state, result.seekerDespairGain),
+  );
+  let employerDespair = clampDespair(
+    state.employerDespair + getScaledEmployerDespairDelta(state, result.employerDespairGain),
+  );
 
   seeker.applications += 1;
   seeker.savings = Math.max(0, seeker.savings - APPLICATION_COST);

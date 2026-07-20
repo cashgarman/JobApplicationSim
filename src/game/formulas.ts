@@ -10,17 +10,20 @@ import {
   APPLICATION_COST,
   DEBT_DESPAIR_PER_SEC,
   DEBT_DESPAIR_REFERENCE,
+  DESPAIR_GAIN_SCALE,
   DESPAIR_MAX,
   EMPLOYER_DESPAIR_PER_SEC,
   LOAN_INTEREST_ESCALATION,
-  LOAN_DESPAIR_BASE_RELIEF,
-  LOAN_DESPAIR_DECAY,
+  LOAN_AMOUNT_DECAY,
+  LOAN_DESPAIR_GAIN_COMPOUND,
+  LOAN_DESPAIR_GAIN_ESCALATION,
   HUMAN_INTERVIEW_FAIL_MESSAGES,
   HUMAN_INTERVIEW_FILL_RATE,
   HUMAN_INTERVIEW_MESSAGES,
   INITIAL_SAVINGS,
   REJECTION_MESSAGES,
   SEEKER_DESPAIR_PER_SEC,
+  SEEKER_DESPAIR_SIDE_MULTIPLIER,
   pickRandom,
 } from './constants';
 import { SEEKER_UPGRADES, EMPLOYER_UPGRADES } from './upgrades';
@@ -75,6 +78,16 @@ export function clampDespair(value: number): number
   return clamp(value, 0, DESPAIR_MAX);
 }
 
+export function scaleSeekerDespairDelta(delta: number): number
+{
+  return delta * DESPAIR_GAIN_SCALE * SEEKER_DESPAIR_SIDE_MULTIPLIER;
+}
+
+export function scaleEmployerDespairDelta(delta: number): number
+{
+  return delta * DESPAIR_GAIN_SCALE;
+}
+
 export function getLoanInterestRate(loansTaken: number): number
 {
   return BASE_LOAN_INTEREST_PER_SEC * (1 + LOAN_INTEREST_ESCALATION * loansTaken);
@@ -95,10 +108,34 @@ export function formatLoanApr(loansTaken: number): string
   return `${Math.floor(annualized)}%`;
 }
 
-export function getLoanDespairRelief(loansTakenBefore: number): number
+export function getLoanDespairGainMultiplier(loansTaken: number): number
 {
-  const loanNumber = loansTakenBefore + 1;
-  return LOAN_DESPAIR_BASE_RELIEF * Math.pow(LOAN_DESPAIR_DECAY, loanNumber - 1);
+  if (loansTaken <= 0)
+  {
+    return 1;
+  }
+
+  return 1 + LOAN_DESPAIR_GAIN_ESCALATION * (Math.pow(LOAN_DESPAIR_GAIN_COMPOUND, loansTaken) - 1);
+}
+
+export function getLoanPrincipal(baseAmount: number, loansTakenBefore: number): number
+{
+  if (loansTakenBefore <= 0)
+  {
+    return baseAmount;
+  }
+
+  return Math.max(1, Math.floor(baseAmount * Math.pow(LOAN_AMOUNT_DECAY, loansTakenBefore)));
+}
+
+export function getScaledSeekerDespairDelta(state: GameState, delta: number): number
+{
+  return scaleSeekerDespairDelta(delta) * getLoanDespairGainMultiplier(state.seeker.loansTaken);
+}
+
+export function getScaledEmployerDespairDelta(state: GameState, delta: number): number
+{
+  return scaleEmployerDespairDelta(delta) * getLoanDespairGainMultiplier(state.employer.loansTaken);
 }
 
 export function getDebtDespairBonus(debt: number): number
@@ -112,17 +149,20 @@ export function getDebtDespairBonus(debt: number): number
 
 export function getPassiveDespairGain(state: GameState): { seeker: number; employer: number }
 {
+  const seekerRaw =
+    SEEKER_DESPAIR_PER_SEC
+    + state.seeker.applications * 0.00008
+    + state.seeker.rejections * 0.00003
+    + getDebtDespairBonus(state.seeker.debt);
+  const employerRaw =
+    EMPLOYER_DESPAIR_PER_SEC
+    + state.employer.openRoles * 0.006
+    + state.employer.aiRecruitmentSpend * 0.000025
+    + getDebtDespairBonus(state.employer.debt);
+
   return {
-    seeker:
-      SEEKER_DESPAIR_PER_SEC
-      + state.seeker.applications * 0.00008
-      + state.seeker.rejections * 0.00003
-      + getDebtDespairBonus(state.seeker.debt),
-    employer:
-      EMPLOYER_DESPAIR_PER_SEC
-      + state.employer.openRoles * 0.006
-      + state.employer.aiRecruitmentSpend * 0.000025
-      + getDebtDespairBonus(state.employer.debt),
+    seeker: scaleSeekerDespairDelta(seekerRaw) * getLoanDespairGainMultiplier(state.seeker.loansTaken),
+    employer: scaleEmployerDespairDelta(employerRaw) * getLoanDespairGainMultiplier(state.employer.loansTaken),
   };
 }
 

@@ -1,5 +1,5 @@
 import type { FeedEvent, GameState } from './types';
-import { checkGameOver, clampDespair } from './formulas';
+import { checkGameOver, getScaledEmployerDespairDelta, clampDespair } from './formulas';
 import { pickRandom } from './constants';
 
 export interface PendingRolePost
@@ -68,7 +68,7 @@ export function resolvePostedRole(
     employer.positionsFilled += 1;
     employer.openRoles = Math.max(0, employer.openRoles - 1);
     employer.revenue += 25;
-    employerDespair = clampDespair(employerDespair - 1.2);
+    employerDespair = clampDespair(employerDespair + getScaledEmployerDespairDelta(state, -1.2));
 
     return {
       message: pickRandom(FILLED_MESSAGES(pending.roleNumber)),
@@ -81,7 +81,7 @@ export function resolvePostedRole(
   {
     employer.openRoles = Math.max(0, employer.openRoles - 1);
     employer.aiRecruitmentSpend += Math.floor(200 + Math.random() * 800);
-    employerDespair = clampDespair(employerDespair + 0.6);
+    employerDespair = clampDespair(employerDespair + getScaledEmployerDespairDelta(state, 0.6));
 
     return {
       message: pickRandom(NO_CANDIDATES_MESSAGES(pending.roleNumber, pending.applicantCount)),
@@ -92,7 +92,7 @@ export function resolvePostedRole(
 
   if (roll < 0.78)
   {
-    employerDespair = clampDespair(employerDespair + 0.35);
+    employerDespair = clampDespair(employerDespair + getScaledEmployerDespairDelta(state, 0.35));
 
     return {
       message: pickRandom(STALLED_MESSAGES(pending.roleNumber, pending.applicantCount)),
@@ -102,7 +102,7 @@ export function resolvePostedRole(
   }
 
   employer.openRoles = Math.max(0, employer.openRoles - 1);
-  employerDespair = clampDespair(employerDespair + 0.5);
+  employerDespair = clampDespair(employerDespair + getScaledEmployerDespairDelta(state, 0.5));
 
   return {
     message: pickRandom(CANCELLED_MESSAGES(pending.roleNumber)),

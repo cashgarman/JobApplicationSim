@@ -72,10 +72,15 @@ body {
 }
 
 .side-column-actions {
+  position: relative;
+  z-index: 1;
   min-height: 7.75rem;
+  overflow: visible;
 }
 
 .side-column-primary-btn {
+  position: relative;
+  z-index: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -86,6 +91,11 @@ body {
   line-height: 1.2;
   text-align: center;
   text-transform: uppercase;
+}
+
+.side-column-primary-btn--buried {
+  pointer-events: none;
+  opacity: 0.35;
 }
 
 .dire-panel-list {
@@ -202,7 +212,7 @@ body {
 
 .despair-label {
   opacity: 0.55;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   transition: color 0.3s ease;
 }
 
@@ -296,6 +306,15 @@ body {
 
 .loan-button-wrap {
   --loan-despair-ratio: 0;
+  --loan-overlap-progress: 0;
+  position: relative;
+  z-index: calc(10 + var(--loan-overlap-progress) * 10);
+  transform:
+    scale(calc(1 + var(--loan-overlap-progress) * 1.9))
+    translateY(calc(var(--loan-overlap-progress) * -3.4rem));
+  transform-origin: bottom center;
+  transition: transform 0.45s ease, opacity 0.45s ease, z-index 0s;
+  pointer-events: auto;
 }
 
 .loan-button {
@@ -321,7 +340,7 @@ body {
   background-color: color-mix(
     in srgb,
     var(--color-corp-panel) calc((1 - var(--loan-despair-ratio)) * 100%),
-    rgba(239, 83, 80, 0.28) calc(var(--loan-despair-ratio) * 100%)
+    rgba(239, 83, 80, calc(0.28 + var(--loan-overlap-progress) * 0.52)) calc(var(--loan-despair-ratio) * 100%)
   );
   animation: loan-button-despair-heat calc(2.5s - var(--loan-despair-ratio) * 1.7s) ease-in-out infinite;
   transition:
@@ -334,7 +353,7 @@ body {
   background-color: color-mix(
     in srgb,
     var(--color-corp-panel) calc((1 - var(--loan-despair-ratio)) * 100%),
-    rgba(239, 83, 80, 0.38) calc(var(--loan-despair-ratio) * 100%)
+    rgba(239, 83, 80, calc(0.38 + var(--loan-overlap-progress) * 0.42)) calc(var(--loan-despair-ratio) * 100%)
   );
 }
 

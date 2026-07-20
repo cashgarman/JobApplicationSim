@@ -1,4 +1,6 @@
 export const DESPAIR_MAX = 100;
+export const DESPAIR_GAIN_SCALE = 0.25;
+export const SEEKER_DESPAIR_SIDE_MULTIPLIER = 1.75;
 export const SEEKER_DESPAIR_PER_SEC = 0.12;
 export const EMPLOYER_DESPAIR_PER_SEC = 0.1;
 
@@ -10,8 +12,9 @@ export const DEBT_DESPAIR_REFERENCE = 10000;
 export const DEBT_DESPAIR_PER_SEC = 0.04;
 export const SEEKER_LOAN_LOW_FUNDS = 1000;
 export const EMPLOYER_LOAN_LOW_FUNDS = 2000;
-export const LOAN_DESPAIR_BASE_RELIEF = 10;
-export const LOAN_DESPAIR_DECAY = 0.55;
+export const LOAN_DESPAIR_GAIN_ESCALATION = 0.95;
+export const LOAN_DESPAIR_GAIN_COMPOUND = 1.75;
+export const LOAN_AMOUNT_DECAY = 0.48;
 
 export const DESPAIR_FLAVOR_TIERS: { min: number; messages: string[] }[] = [
   {
