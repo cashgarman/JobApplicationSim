@@ -101,7 +101,7 @@ interface AnimationStore
   employerDireFlavorLog: DireFlavorLogEntry[];
   seekerDismayPulse: number;
   employerDismayPulse: number;
-  spawnFromOutcome: (result: OutcomeResult) => void;
+  spawnFromOutcome: (result: OutcomeResult, options?: { includeApplicationIcon?: boolean }) => void;
   spawnApplicationSent: () => void;
   spawnRolePosted: () => void;
   appendEmployerDireFlavor: (text?: string) => void;
@@ -312,8 +312,9 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
     }));
   },
 
-  spawnFromOutcome: (result: OutcomeResult) =>
+  spawnFromOutcome: (result: OutcomeResult, options?: { includeApplicationIcon?: boolean }) =>
   {
+    const includeApplicationIcon = options?.includeApplicationIcon ?? true;
     const now = Date.now();
     let icons = get().pipelineIcons;
     let texts = get().floatTexts;
@@ -321,8 +322,11 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
     let seekerDismayPulse = get().seekerDismayPulse;
     let employerDismayPulse = get().employerDismayPulse;
 
-    const applicationIcon = makeIcon('application', 'seekerToAi', result.message, now - 400);
-    icons = addIcon(icons, applicationIcon);
+    if (includeApplicationIcon)
+    {
+      const applicationIcon = makeIcon('application', 'seekerToAi', result.message, now - 400);
+      icons = addIcon(icons, applicationIcon);
+    }
 
     switch (result.outcome)
     {

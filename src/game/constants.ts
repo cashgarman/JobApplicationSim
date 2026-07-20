@@ -339,6 +339,19 @@ export const FLOAT_TEXT_AI_HOPE = [
   'Dashboard looks great',
 ];
 
+export const AGENCY_PROCESSING_MESSAGES = [
+  'Processing fees...',
+  'AI screening in progress...',
+  'Running compatibility matrix...',
+  'Billing per applicant...',
+  'Monetizing applicant data...',
+  'ATS optimization in progress...',
+  'Reviewing role requirements...',
+  'Calculating rejection probability...',
+  'Generating invoice...',
+  'Consulting the algorithm...',
+];
+
 export const FLOAT_TEXT_AI_GOOD = [
   'Record revenue!',
   'Bonus unlocked',

@@ -12,6 +12,12 @@ export interface EconomyConfig
   subscriptionRevenuePerSale: number;
   seekerDespairPerClick: number;
   employerDespairPerClick: number;
+  tickerScrollSpeedPxPerSec: number;
+  tickerMessageGapPx: number;
+  binaryRainSpeed: number;
+  binaryRainGlowDurationSec: number;
+  binaryRainCharColor: string;
+  binaryRainGlowPeakColor: string;
 }
 
 export const economyConfig = economyJson.economy as EconomyConfig;

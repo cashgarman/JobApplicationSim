@@ -9,7 +9,8 @@ import {
 } from '../game/constants';
 import { getGeneratorById, getUpgradeById } from '../game/upgrades';
 import { getUpgradeCost, checkGameOver, clampDespair, getLoanPrincipal, getEmployerClickDespairDelta } from '../game/formulas';
-import { createFeedEvent, createInitialState, processApplication, tickGame } from '../game/tick';
+import { createFeedEvent, createInitialState, outcomeToFeedType, resolveApplicationOutcome, submitApplication, tickGame } from '../game/tick';
+import { processPendingApplications, scheduleApplication, type PendingApplication } from '../game/applicationProcess';
 import { processPendingRolePosts, scheduleRolePost } from '../game/rolePost';
 import type { PendingRolePost } from '../game/rolePost';
 import { getInitialState, saveGame } from '../game/save';
@@ -22,6 +23,7 @@ interface GameStore
   state: GameState;
   feedEvents: FeedEvent[];
   pendingRolePosts: PendingRolePost[];
+  pendingApplications: PendingApplication[];
   sessionId: number;
   startGame: () => void;
   togglePerspective: () => void;
@@ -57,6 +59,7 @@ function clearedLogState()
   return {
     feedEvents: [] as FeedEvent[],
     pendingRolePosts: [] as PendingRolePost[],
+    pendingApplications: [] as PendingApplication[],
   };
 }
 
@@ -64,6 +67,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   state: getInitialState(),
   feedEvents: [],
   pendingRolePosts: [],
+  pendingApplications: [],
   sessionId: 0,
 
   startGame: () =>
@@ -114,23 +118,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    const { state, result } = processApplication(store.state);
-    useAnimationStore.getState().spawnFromOutcome(result);
-    const feedEvents = addFeedEvents(
-      store.feedEvents,
-      [
-        createFeedEvent(
-          result.message,
-          result.outcome === 'rejection'
-            ? 'rejection'
-            : result.outcome === 'aiInterview'
-              ? 'aiInterview'
-              : 'humanInterview',
-        ),
-      ],
-    );
+    const state = submitApplication(store.state);
+    const pendingApplications = [
+      ...store.pendingApplications,
+      scheduleApplication('click'),
+    ];
+    useAnimationStore.getState().spawnApplicationSent();
     persist(state);
-    set({ state, feedEvents });
+    set({ state, pendingApplications });
   },
 
   clickPostRole: () =>
@@ -374,7 +369,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
-    const { state, events } = tickGame(store.state);
+    const { state: tickedState, events, pendingApplications: scheduledApplications } = tickGame(store.state);
+    let state = tickedState;
+    const allPendingApplications = [...store.pendingApplications, ...scheduledApplications];
+    const applicationResolution = processPendingApplications(allPendingApplications);
+    const resolvedApplicationEvents: FeedEvent[] = [];
+
+    for (const pending of applicationResolution.resolved)
+    {
+      const resolution = resolveApplicationOutcome(state);
+      state = resolution.state;
+      resolvedApplicationEvents.push(
+        createFeedEvent(resolution.result.message, outcomeToFeedType(resolution.result.outcome)),
+      );
+      useAnimationStore.getState().spawnFromOutcome(resolution.result, {
+        includeApplicationIcon: pending.source === 'auto',
+      });
+    }
+
     const roleResolution = processPendingRolePosts(store.pendingRolePosts, state);
     const resolvedRoleEvents = roleResolution.events.map((event) =>
       createFeedEvent(event.message, event.type),
@@ -386,31 +398,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         useAnimationStore.getState().appendEmployerDireFlavor();
       }
     }
-    const allNewEvents = [...events, ...resolvedRoleEvents];
-    if (allNewEvents.length > 0)
-    {
-      const sampled = allNewEvents.find(
-        (e) =>
-          e.type === 'rejection'
-          || e.type === 'aiInterview'
-          || e.type === 'humanInterview',
-      );
-      if (sampled)
-      {
-        useAnimationStore.getState().spawnFromOutcome({
-          outcome:
-            sampled.type === 'rejection'
-              ? 'rejection'
-              : sampled.type === 'aiInterview'
-                ? 'aiInterview'
-                : 'humanInterview',
-          message: sampled.message,
-          positionFilled: false,
-          seekerDespairGain: 0,
-          employerDespairGain: 0,
-        });
-      }
-    }
+    const allNewEvents = [...events, ...resolvedApplicationEvents, ...resolvedRoleEvents];
     const feedEvents = allNewEvents.length > 0
       ? addFeedEvents(store.feedEvents, allNewEvents)
       : store.feedEvents;
@@ -419,6 +407,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       state: roleResolution.state,
       feedEvents,
       pendingRolePosts: roleResolution.remaining,
+      pendingApplications: applicationResolution.remaining,
     });
   },
 

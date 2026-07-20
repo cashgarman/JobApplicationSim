@@ -4,6 +4,7 @@ import {
   INITIAL_SAVINGS,
   APPLICATION_COST,
 } from './constants';
+import { scheduleApplication, type PendingApplication } from './applicationProcess';
 import {
   applyDespairTick,
   checkGameOver,
@@ -72,19 +73,32 @@ export function createInitialState(): GameState
   };
 }
 
-function applyOutcome(state: GameState, result: OutcomeResult): GameState
+export function submitApplication(state: GameState): GameState
 {
+  return checkGameOver({
+    ...state,
+    seeker: {
+      ...state.seeker,
+      applications: state.seeker.applications + 1,
+      savings: Math.max(0, state.seeker.savings - APPLICATION_COST),
+    },
+    seekerDespair: clampDespair(
+      state.seekerDespair + getSeekerClickDespairDelta(state),
+    ),
+  });
+}
+
+export function resolveApplicationOutcome(state: GameState): {
+  state: GameState;
+  result: OutcomeResult;
+}
+{
+  const result = rollApplicationOutcome(state);
   const seeker = { ...state.seeker };
   const employer = { ...state.employer };
-  let seekerDespair = clampDespair(
-    state.seekerDespair + getSeekerClickDespairDelta(state),
-  );
-  let employerDespair = clampDespair(
+  const employerDespair = clampDespair(
     state.employerDespair + getScaledEmployerDespairDelta(state, result.employerDespairGain),
   );
-
-  seeker.applications += 1;
-  seeker.savings = Math.max(0, seeker.savings - APPLICATION_COST);
 
   switch (result.outcome)
   {
@@ -104,13 +118,15 @@ function applyOutcome(state: GameState, result: OutcomeResult): GameState
     employer.positionsFilled += 1;
   }
 
-  return checkGameOver({
-    ...state,
-    seeker,
-    employer,
-    seekerDespair,
-    employerDespair,
-  });
+  return {
+    state: checkGameOver({
+      ...state,
+      seeker,
+      employer,
+      employerDespair,
+    }),
+    result,
+  };
 }
 
 export function processApplication(state: GameState): {
@@ -118,57 +134,44 @@ export function processApplication(state: GameState): {
   result: OutcomeResult;
 }
 {
-  const result = rollApplicationOutcome(state);
-  const newState = applyOutcome(state, result);
-  return { state: newState, result };
+  const submitted = submitApplication(state);
+  return resolveApplicationOutcome(submitted);
 }
 
-export function processApplications(state: GameState, count: number): {
+export function scheduleAutoApplications(state: GameState, count: number): {
   state: GameState;
-  events: FeedEvent[];
+  pending: PendingApplication[];
 }
 {
   let current = state;
-  const events: FeedEvent[] = [];
+  const pending: PendingApplication[] = [];
   const applications = Math.floor(count);
   const fractional = count - applications;
 
   for (let i = 0; i < applications; i++)
   {
-    const { state: next, result } = processApplication(current);
-    current = next;
-    if (i === applications - 1 || Math.random() < 0.15)
-    {
-      events.push(
-        createFeedEvent(
-          result.message,
-          result.outcome === 'rejection'
-            ? 'rejection'
-            : result.outcome === 'aiInterview'
-              ? 'aiInterview'
-              : 'humanInterview',
-        ),
-      );
-    }
+    current = submitApplication(current);
+    pending.push(scheduleApplication('auto'));
   }
 
   if (fractional > 0 && Math.random() < fractional)
   {
-    const { state: next, result } = processApplication(current);
-    current = next;
-    events.push(
-      createFeedEvent(
-        result.message,
-        result.outcome === 'rejection'
-          ? 'rejection'
-          : result.outcome === 'aiInterview'
-            ? 'aiInterview'
-            : 'humanInterview',
-      ),
-    );
+    current = submitApplication(current);
+    pending.push(scheduleApplication('auto'));
   }
 
-  return { state: current, events };
+  return { state: current, pending };
+}
+
+export function outcomeToFeedType(
+  outcome: OutcomeResult['outcome'],
+): FeedEvent['type']
+{
+  return outcome === 'rejection'
+    ? 'rejection'
+    : outcome === 'aiInterview'
+      ? 'aiInterview'
+      : 'humanInterview';
 }
 
 function applySideDebt(
@@ -287,11 +290,12 @@ function createDrainEvents(before: GameState, after: GameState): FeedEvent[]
 export function tickGame(state: GameState): {
   state: GameState;
   events: FeedEvent[];
+  pendingApplications: PendingApplication[];
 }
 {
   if (state.phase !== 'playing')
   {
-    return { state, events: [] };
+    return { state, events: [], pendingApplications: [] };
   }
 
   const events: FeedEvent[] = [];
@@ -321,12 +325,13 @@ export function tickGame(state: GameState): {
     },
   };
 
+  let pendingApplications: PendingApplication[] = [];
   const appsPerSec = getApplicationsPerSec(current);
   if (appsPerSec > 0)
   {
-    const { state: afterApps, events: appEvents } = processApplications(current, appsPerSec);
-    current = afterApps;
-    events.push(...appEvents);
+    const scheduled = scheduleAutoApplications(current, appsPerSec);
+    current = scheduled.state;
+    pendingApplications = scheduled.pending;
   }
 
   events.push(...createDrainEvents(beforeDrain, current));
@@ -337,5 +342,5 @@ export function tickGame(state: GameState): {
 
   current = checkGameOver(applyDespairTick(current));
 
-  return { state: current, events };
+  return { state: current, events, pendingApplications };
 }

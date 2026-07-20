@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { AGENCY_PROCESSING_MESSAGES } from '../game/constants';
 import { formatCurrency, getAgencyStats } from '../game/formulas';
 import { useGameStore } from '../store/gameStore';
 import { EventFeed } from './EventFeed';
@@ -26,18 +28,88 @@ function AgencyStatRow({ label, value, highlight }: AgencyStatRowProps)
   );
 }
 
+function AgencyProcessingIndicator({
+  applicationCount,
+  roleCount,
+}: {
+  applicationCount: number;
+  roleCount: number;
+})
+{
+  const [messageIndex, setMessageIndex] = useState(0);
+  const totalCount = applicationCount + roleCount;
+
+  useEffect(() =>
+  {
+    setMessageIndex(0);
+  }, [totalCount]);
+
+  useEffect(() =>
+  {
+    const interval = setInterval(() =>
+    {
+      setMessageIndex((current) => (current + 1) % AGENCY_PROCESSING_MESSAGES.length);
+    }, 2200);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  if (totalCount <= 0)
+  {
+    return null;
+  }
+
+  const queueParts: string[] = [];
+  if (applicationCount > 0)
+  {
+    queueParts.push(`${applicationCount} app${applicationCount === 1 ? '' : 's'}`);
+  }
+  if (roleCount > 0)
+  {
+    queueParts.push(`${roleCount} role${roleCount === 1 ? '' : 's'}`);
+  }
+
+  return (
+    <div className="agency-processing mt-2 shrink-0 rounded border border-corp-amber/40 bg-corp-bg/80 px-3 py-2">
+      <div className="flex items-center gap-2.5">
+        <div className="agency-processing-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-corp-amber/50 bg-corp-panel">
+          <i className="fa-solid fa-brain text-sm text-corp-amber" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="agency-processing-text truncate text-xs font-semibold text-corp-amber lg:text-sm">
+            {AGENCY_PROCESSING_MESSAGES[messageIndex]}
+          </p>
+          <p className="truncate text-[10px] text-corp-muted lg:text-xs">
+            {queueParts.join(' · ')} in queue
+          </p>
+        </div>
+        <div className="agency-processing-dots flex shrink-0 gap-1" aria-hidden="true">
+          <span className="agency-processing-dot" />
+          <span className="agency-processing-dot" />
+          <span className="agency-processing-dot" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function AILayerColumn()
 {
   const state = useGameStore((s) => s.state);
+  const pendingApplications = useGameStore((s) => s.pendingApplications);
+  const pendingRolePosts = useGameStore((s) => s.pendingRolePosts);
   const agency = getAgencyStats(state);
   const thriving = agency.agencyProfit > 500;
+  const isProcessing = pendingApplications.length + pendingRolePosts.length > 0;
 
   return (
     <div
       className={`column-panel relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded border bg-corp-panel p-2 lg:p-3 ${
-        thriving
-          ? 'border-corp-green/50 agency-profit-glow'
-          : 'border-corp-amber/40'
+        isProcessing
+          ? 'border-corp-amber/60 ai-pulse-border'
+          : thriving
+            ? 'border-corp-green/50 agency-profit-glow'
+            : 'border-corp-amber/40'
       }`}
     >
       <div className="pointer-events-none absolute inset-0 rounded bg-red-500/30" />
@@ -90,6 +162,11 @@ export function AILayerColumn()
             highlight="bad"
           />
         </div>
+
+        <AgencyProcessingIndicator
+          applicationCount={pendingApplications.length}
+          roleCount={pendingRolePosts.length}
+        />
 
         <div className="flex shrink-0 flex-col items-center justify-center gap-1.5 border-y border-corp-border/50 py-3 text-center">
           <i className="fa-solid fa-scale-unbalanced text-2xl text-corp-amber opacity-90 lg:text-3xl" />

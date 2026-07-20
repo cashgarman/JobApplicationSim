@@ -8,7 +8,13 @@
     "hrInternAiSpendPerSec": 0.2,
     "outsourcedRecruiterAiSpendPerSec": 0.5,
     "subscriptionRevenuePerSale": 4.99,
-    "seekerDespairPerClick": 0.45,
-    "employerDespairPerClick": 1.5
+    "seekerDespairPerClick": 0.75,
+    "employerDespairPerClick": 0.75,
+    "tickerScrollSpeedPxPerSec": 36,
+    "tickerMessageGapPx": 56,
+    "binaryRainSpeed": 0.5,
+    "binaryRainGlowDurationSec": 0.55,
+    "binaryRainCharColor": "#81c784",
+    "binaryRainGlowPeakColor": "#48e048"
   }
 }

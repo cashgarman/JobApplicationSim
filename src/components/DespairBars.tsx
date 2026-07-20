@@ -1,8 +1,6 @@
 import type { CSSProperties } from 'react';
 import { DESPAIR_MAX } from '../game/constants';
-import { useHireSituationMessage } from '../hooks/useHireSituationMessage';
 import { useGameStore } from '../store/gameStore';
-
 function DespairBar({
   label,
   value,
@@ -36,7 +34,7 @@ function DespairBar({
         </span>
       </div>
       <div
-        className={`relative flex h-3 overflow-hidden rounded border border-corp-border bg-corp-bg ${
+        className={`relative flex h-8 overflow-hidden rounded border border-corp-border bg-corp-bg lg:h-9 ${
           fillDirection === 'rtl' ? 'justify-end' : ''
         }`}
       >
@@ -77,27 +75,9 @@ export function DespairBars()
 {
   const seekerDespair = useGameStore((s) => s.state.seekerDespair);
   const employerDespair = useGameStore((s) => s.state.employerDespair);
-  const positionsFilled = useGameStore((s) => s.state.employer.positionsFilled);
-
-  const peakDespair = Math.max(seekerDespair, employerDespair);
-  const isCritical = peakDespair >= 85;
-  const { message: hireSituationLabel, flashKey } = useHireSituationMessage(
-    positionsFilled,
-    peakDespair,
-  );
 
   return (
     <div className="rounded border border-corp-border bg-corp-panel px-3 py-2.5">
-      <div className="mb-1.5 flex w-full justify-center px-1">
-        <span
-          key={flashKey}
-          className={`despair-label font-pixel text-center text-[8px] leading-snug lg:text-[9px] ${
-            flashKey > 0 ? 'despair-label-flash' : ''
-          } ${isCritical ? 'text-corp-red' : 'text-corp-muted'}`}
-        >
-          {hireSituationLabel}
-        </span>
-      </div>
       <div className="flex items-end gap-2">
         <DespairBar
           label="Job Seekers"
