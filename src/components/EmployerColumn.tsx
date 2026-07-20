@@ -1,7 +1,6 @@
 import { DirePanel } from './DirePanel';
 import { DespairActionButton } from './DespairActionButton';
 import { EmployerStats } from './EmployerStats';
-import { FloatingTextLayer } from './FloatingTextLayer';
 import { LoanButton } from './LoanButton';
 import { getLoanOverlapProgress } from '../game/actionLabels';
 import { useDismalFlash } from '../hooks/useDismalFlash';
@@ -51,7 +50,6 @@ export function EmployerColumn()
           <DirePanel side="employer" />
         </div>
       </div>
-      <FloatingTextLayer column="employer" />
     </div>
   );
 }

@@ -6,18 +6,19 @@ import { GameOverScreen } from './components/GameOverScreen';
 function App()
 {
   const phase = useGameStore((s) => s.state.phase);
+  const sessionId = useGameStore((s) => s.sessionId);
 
   if (phase === 'start')
   {
-    return <StartScreen />;
+    return <StartScreen key={sessionId} />;
   }
 
   if (phase === 'gameOver')
   {
-    return <GameOverScreen />;
+    return <GameOverScreen key={sessionId} />;
   }
 
-  return <Layout />;
+  return <Layout key={sessionId} />;
 }
 
 export default App;

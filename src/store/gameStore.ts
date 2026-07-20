@@ -22,6 +22,7 @@ interface GameStore
   state: GameState;
   feedEvents: FeedEvent[];
   pendingRolePosts: PendingRolePost[];
+  sessionId: number;
   startGame: () => void;
   togglePerspective: () => void;
   clickApply: () => void;
@@ -32,6 +33,7 @@ interface GameStore
   takeEmployerLoan: () => void;
   tick: () => void;
   resetGame: () => void;
+  restartGame: () => void;
 }
 
 function persist(state: GameState): void
@@ -48,6 +50,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   state: getInitialState(),
   feedEvents: [],
   pendingRolePosts: [],
+  sessionId: 0,
 
   startGame: () =>
   {
@@ -388,9 +391,40 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   resetGame: () =>
   {
+    useAnimationStore.getState().clearAll();
     const state = createInitialState();
     persist(state);
+    set((store) => ({
+      state,
+      feedEvents: [],
+      pendingRolePosts: [],
+      sessionId: store.sessionId + 1,
+    }));
+  },
+
+  restartGame: () =>
+  {
     useAnimationStore.getState().clearAll();
-    set({ state, feedEvents: [], pendingRolePosts: [] });
+    const state = createInitialState();
+    persist(state);
+    set((store) => ({
+      state,
+      feedEvents: [],
+      pendingRolePosts: [],
+      sessionId: store.sessionId + 1,
+    }));
+
+    requestAnimationFrame(() =>
+    {
+      requestAnimationFrame(() =>
+      {
+        const playingState = {
+          ...createInitialState(),
+          phase: 'playing' as const,
+        };
+        persist(playingState);
+        set({ state: playingState });
+      });
+    });
   },
 }));

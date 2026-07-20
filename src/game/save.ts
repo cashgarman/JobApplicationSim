@@ -83,5 +83,6 @@ export function clearSave(): void
 
 export function getInitialState(): GameState
 {
-  return loadGame() ?? createInitialState();
+  clearSave();
+  return createInitialState();
 }

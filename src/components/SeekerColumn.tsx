@@ -1,6 +1,5 @@
 import { DirePanel } from './DirePanel';
 import { DespairActionButton } from './DespairActionButton';
-import { FloatingTextLayer } from './FloatingTextLayer';
 import { LoanButton } from './LoanButton';
 import { SeekerStats } from './SeekerStats';
 import { getLoanOverlapProgress } from '../game/actionLabels';
@@ -57,7 +56,6 @@ export function SeekerColumn()
           <DirePanel side="seeker" />
         </div>
       </div>
-      <FloatingTextLayer column="seeker" />
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { formatCurrency, getAgencyStats } from '../game/formulas';
 import { useGameStore } from '../store/gameStore';
 import { EventFeed } from './EventFeed';
-import { FloatingTextLayer } from './FloatingTextLayer';
 
 interface AgencyStatRowProps
 {
@@ -103,7 +102,6 @@ export function AILayerColumn()
           <EventFeed compact />
         </div>
       </div>
-      <FloatingTextLayer column="ai" />
     </div>
   );
 }

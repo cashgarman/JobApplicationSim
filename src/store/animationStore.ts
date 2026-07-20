@@ -16,6 +16,28 @@ const MAX_FLOAT_TEXTS = 24;
 const ICON_LIFETIME_MS = 2500;
 
 let animCounter = 0;
+const pendingAnimationTimeouts = new Set<ReturnType<typeof setTimeout>>();
+
+function scheduleAnimationTimeout(callback: () => void, delayMs: number): void
+{
+  const timeoutId = setTimeout(() =>
+  {
+    pendingAnimationTimeouts.delete(timeoutId);
+    callback();
+  }, delayMs);
+
+  pendingAnimationTimeouts.add(timeoutId);
+}
+
+function clearAnimationTimeouts(): void
+{
+  for (const timeoutId of pendingAnimationTimeouts)
+  {
+    clearTimeout(timeoutId);
+  }
+
+  pendingAnimationTimeouts.clear();
+}
 
 function nextId(prefix: string): string
 {
@@ -93,43 +115,101 @@ function addFloat(texts: FloatText[], text: FloatText): FloatText[]
 
 function getFloatLifetimeMs(text: FloatText): number
 {
-  return (text.duration + text.delay) * 1000 + 500;
+  const travelMs = text.delay + text.duration * 1000;
+  const lingerMs = text.lingerDuration ? text.lingerDuration * 1000 : 0;
+  return travelMs + lingerMs + 500;
 }
 
-function createFloatVariation(): Pick<
-  FloatText,
-  'offsetX' | 'startBottom' | 'duration' | 'delay' | 'driftX' | 'riseY' | 'scale'
->
-{
-  return {
-    offsetX: randomBetween(-45, 45),
-    startBottom: randomBetween(12, 58),
-    duration: randomBetween(3.8, 5.2),
-    delay: randomBetween(0, 0.3),
-    driftX: randomBetween(-24, 24),
-    riseY: randomBetween(-38, -68),
-    scale: randomBetween(1.12, 1.48),
-  };
-}
-
-function spawnFloat(
-  texts: FloatText[],
+function makeFloatForIcon(
+  icon: PipelineIcon,
   column: FloatTextColumn,
   tone: FloatTextTone,
-  override?: string,
-): FloatText[]
+  text?: string,
+  options?: { lingerAtDestination?: boolean },
+): FloatText
 {
-  return addFloat(texts, {
+  const float: FloatText = {
     id: nextId('float'),
+    path: icon.path,
     column,
-    text: override ?? pickFloat(column, tone),
+    text: text ?? pickFloat(column, tone),
     tone,
-    createdAt: Date.now(),
-    ...createFloatVariation(),
-  });
+    phase: 'travel',
+    createdAt: icon.createdAt,
+    duration: icon.duration,
+    delay: icon.delay,
+    wobbleY: icon.wobbleY,
+    wobbleX: icon.wobbleX,
+    rotationStart: icon.rotationStart,
+    rotationEnd: icon.rotationEnd,
+    scalePeak: icon.scalePeak,
+  };
+
+  if (options?.lingerAtDestination)
+  {
+    float.lingerDuration = randomBetween(3, 4.8);
+    float.lingerDriftX = randomBetween(-30, 30);
+  }
+
+  return float;
 }
 
-export const useAnimationStore = create<AnimationStore>((set, get) => ({
+function registerFloatLingerTransition(
+  float: FloatText,
+  getState: () => AnimationStore,
+  setState: (partial: Partial<AnimationStore> | ((state: AnimationStore) => Partial<AnimationStore>)) => void,
+): void
+{
+  if (!float.lingerDuration)
+  {
+    return;
+  }
+
+  const travelMs = float.delay + float.duration * 1000;
+  scheduleAnimationTimeout(() =>
+  {
+    const state = getState();
+    if (!state.floatTexts.some((entry) => entry.id === float.id))
+    {
+      return;
+    }
+
+    setState({
+      floatTexts: state.floatTexts.map((entry) =>
+        entry.id === float.id ? { ...entry, phase: 'linger' } : entry,
+      ),
+    });
+  }, travelMs);
+}
+
+function addFloatForIcon(
+  texts: FloatText[],
+  icon: PipelineIcon,
+  column: FloatTextColumn,
+  tone: FloatTextTone,
+  text?: string,
+  options?: { lingerAtDestination?: boolean },
+  lingerHandlers?: {
+    getState: () => AnimationStore;
+    setState: (partial: Partial<AnimationStore> | ((state: AnimationStore) => Partial<AnimationStore>)) => void;
+  },
+): FloatText[]
+{
+  const float = makeFloatForIcon(icon, column, tone, text, options);
+  if (lingerHandlers)
+  {
+    registerFloatLingerTransition(float, lingerHandlers.getState, lingerHandlers.setState);
+  }
+  return addFloat(texts, float);
+}
+
+export const useAnimationStore = create<AnimationStore>((set, get) => {
+  const lingerHandlers = {
+    getState: get,
+    setState: set,
+  };
+
+  return {
   pipelineIcons: [],
   floatTexts: [],
   seekerDismayPulse: 0,
@@ -138,16 +218,18 @@ export const useAnimationStore = create<AnimationStore>((set, get) => ({
   spawnApplicationSent: () =>
   {
     const now = Date.now();
+    const applicationIcon = makeIcon('application', 'seekerToAi', 'Application submitted', now);
+
     set((store) => ({
-      pipelineIcons: addIcon(
-        store.pipelineIcons,
-        makeIcon('application', 'seekerToAi', 'Application submitted', now),
-      ),
-      floatTexts: spawnFloat(
-        spawnFloat(store.floatTexts, 'seeker', 'hope', 'Sent!'),
-        'ai',
+      pipelineIcons: addIcon(store.pipelineIcons, applicationIcon),
+      floatTexts: addFloatForIcon(
+        store.floatTexts,
+        applicationIcon,
+        'seeker',
         'hope',
-        'Parsing PDF...',
+        'Sent!',
+        undefined,
+        lingerHandlers,
       ),
     }));
   },
@@ -160,55 +242,59 @@ export const useAnimationStore = create<AnimationStore>((set, get) => ({
     let seekerDismayPulse = get().seekerDismayPulse;
     let employerDismayPulse = get().employerDismayPulse;
 
-    icons = addIcon(
-      icons,
-      makeIcon('application', 'seekerToAi', result.message, now - 400),
-    );
+    const applicationIcon = makeIcon('application', 'seekerToAi', result.message, now - 400);
+    icons = addIcon(icons, applicationIcon);
 
     switch (result.outcome)
     {
       case 'rejection':
-        icons = addIcon(
-          icons,
-          makeIcon('rejection', 'aiToSeeker', result.message, now),
-        );
-        texts = spawnFloat(texts, 'seeker', 'bad');
-        texts = spawnFloat(texts, 'ai', 'bad');
+      {
+        const rejectionIcon = makeIcon('rejection', 'aiToSeeker', result.message, now);
+        icons = addIcon(icons, rejectionIcon);
+        texts = addFloatForIcon(texts, rejectionIcon, 'seeker', 'bad', undefined, {
+          lingerAtDestination: true,
+        }, lingerHandlers);
         seekerDismayPulse = now;
         employerDismayPulse = now;
         break;
+      }
 
       case 'aiInterview':
-        icons = addIcon(
-          icons,
-          makeIcon('aiInterview', 'aiStays', result.message, now),
-        );
-        texts = spawnFloat(texts, 'seeker', 'hope', 'Progress?!');
-        texts = spawnFloat(texts, 'ai', 'hope', 'Record 47 videos');
+      {
+        const interviewIcon = makeIcon('aiInterview', 'aiStays', result.message, now);
+        icons = addIcon(icons, interviewIcon);
+        texts = addFloatForIcon(texts, interviewIcon, 'seeker', 'hope', 'Progress?!', undefined, lingerHandlers);
         seekerDismayPulse = now;
         break;
+      }
 
       case 'humanInterview':
-        icons = addIcon(
-          icons,
-          makeIcon('humanInterview', 'aiToEmployer', result.message, now),
-        );
-        texts = spawnFloat(texts, 'employer', 'good', 'Human detected?!');
-        texts = spawnFloat(texts, 'ai', 'good', 'Anomaly detected');
+      {
+        const interviewIcon = makeIcon('humanInterview', 'aiToEmployer', result.message, now);
+        icons = addIcon(icons, interviewIcon);
+        texts = addFloatForIcon(texts, interviewIcon, 'employer', 'good', 'Human detected?!', undefined, lingerHandlers);
         if (!result.positionFilled)
         {
-          setTimeout(() =>
+          scheduleAnimationTimeout(() =>
           {
             const state = get();
+            const rejectionIcon = makeIcon(
+              'rejection',
+              'aiToSeeker',
+              'Rescheduled to AI screen',
+              Date.now(),
+            );
+
             set({
-              pipelineIcons: addIcon(
-                state.pipelineIcons,
-                makeIcon('rejection', 'aiToSeeker', 'Rescheduled to AI screen', Date.now()),
-              ),
-              floatTexts: spawnFloat(
-                spawnFloat(state.floatTexts, 'seeker', 'bad'),
-                'ai',
+              pipelineIcons: addIcon(state.pipelineIcons, rejectionIcon),
+              floatTexts: addFloatForIcon(
+                state.floatTexts,
+                rejectionIcon,
+                'seeker',
                 'bad',
+                undefined,
+                { lingerAtDestination: true },
+                lingerHandlers,
               ),
               seekerDismayPulse: Date.now(),
               employerDismayPulse: Date.now(),
@@ -216,6 +302,7 @@ export const useAnimationStore = create<AnimationStore>((set, get) => ({
           }, 800);
         }
         break;
+      }
     }
 
     set({
@@ -241,6 +328,7 @@ export const useAnimationStore = create<AnimationStore>((set, get) => ({
 
   clearAll: () =>
   {
+    clearAnimationTimeouts();
     set({
       pipelineIcons: [],
       floatTexts: [],
@@ -248,7 +336,8 @@ export const useAnimationStore = create<AnimationStore>((set, get) => ({
       employerDismayPulse: 0,
     });
   },
-}));
+  };
+});
 
 export function getIconClass(kind: PipelineIconKind): string
 {
@@ -282,7 +371,36 @@ export function getPathAnimationClass(path: PipelineIconPath): string
   }
 }
 
-export function getPipelineIconStyle(icon: PipelineIcon): CSSProperties
+export function getFloatPathAnimationClass(path: PipelineIconPath): string
+{
+  switch (path)
+  {
+    case 'seekerToAi':
+      return 'float-seeker-to-ai';
+    case 'aiToSeeker':
+      return 'float-ai-to-seeker';
+    case 'aiStays':
+      return 'float-ai-stays';
+    case 'aiToEmployer':
+      return 'float-ai-to-employer';
+    case 'employerToAi':
+      return 'float-employer-to-ai';
+  }
+}
+
+export function getFloatLingerStyle(text: FloatText): CSSProperties
+{
+  return {
+    ...getPipelineIconStyle(text),
+    '--linger-dur': `${text.lingerDuration ?? 3.5}s`,
+    '--linger-drift': `${text.lingerDriftX ?? 0}px`,
+  } as CSSProperties;
+}
+
+export function getPipelineIconStyle(icon: Pick<
+  PipelineIcon,
+  'duration' | 'delay' | 'wobbleY' | 'wobbleX' | 'rotationStart' | 'rotationEnd' | 'scalePeak'
+>): CSSProperties
 {
   return {
     '--dur': `${icon.duration}s`,

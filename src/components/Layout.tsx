@@ -13,7 +13,6 @@ export function Layout()
   const tick = useGameStore((s) => s.tick);
   const resetGame = useGameStore((s) => s.resetGame);
   const pruneExpired = useAnimationStore((s) => s.pruneExpired);
-  const clearAnimations = useAnimationStore((s) => s.clearAll);
 
   useEffect(() =>
   {
@@ -37,7 +36,6 @@ export function Layout()
   const handleReset = () =>
   {
     resetGame();
-    clearAnimations();
   };
 
   return (

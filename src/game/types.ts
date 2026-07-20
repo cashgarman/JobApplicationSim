@@ -127,17 +127,23 @@ export type FloatTextTone = 'bad' | 'hope' | 'good';
 
 export type FloatTextColumn = 'seeker' | 'ai' | 'employer';
 
+export type FloatTextPhase = 'travel' | 'linger';
+
 export interface FloatText {
   id: string;
+  path: PipelineIconPath;
   column: FloatTextColumn;
   text: string;
   tone: FloatTextTone;
+  phase: FloatTextPhase;
   createdAt: number;
-  offsetX: number;
-  startBottom: number;
   duration: number;
   delay: number;
-  driftX: number;
-  riseY: number;
-  scale: number;
+  wobbleY: number;
+  wobbleX: number;
+  rotationStart: number;
+  rotationEnd: number;
+  scalePeak: number;
+  lingerDuration?: number;
+  lingerDriftX?: number;
 }

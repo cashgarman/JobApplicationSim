@@ -34,15 +34,8 @@ function getGameOverCopy(cause: GameOverCause | undefined): { title: string; bod
 export function GameOverScreen()
 {
   const cause = useGameStore((s) => s.state.gameOverCause);
-  const startGame = useGameStore((s) => s.startGame);
-  const resetGame = useGameStore((s) => s.resetGame);
+  const restartGame = useGameStore((s) => s.restartGame);
   const { title, body } = getGameOverCopy(cause);
-
-  const handleTryAgain = () =>
-  {
-    resetGame();
-    startGame();
-  };
 
   return (
     <div className="flex h-screen flex-col items-center justify-center overflow-hidden bg-corp-bg px-4 text-center">
@@ -57,7 +50,7 @@ export function GameOverScreen()
       </p>
       <button
         type="button"
-        onClick={handleTryAgain}
+        onClick={restartGame}
         className="btn-green font-pixel rounded px-6 py-4 text-sm uppercase"
       >
         Try Again? But Why bother...

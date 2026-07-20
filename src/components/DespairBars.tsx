@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 import { DESPAIR_MAX } from '../game/constants';
 import { useHireSituationMessage } from '../hooks/useHireSituationMessage';
 import { useGameStore } from '../store/gameStore';
@@ -78,35 +78,21 @@ export function DespairBars()
   const seekerDespair = useGameStore((s) => s.state.seekerDespair);
   const employerDespair = useGameStore((s) => s.state.employerDespair);
   const positionsFilled = useGameStore((s) => s.state.employer.positionsFilled);
-  const [isHit, setIsHit] = useState(false);
-  const previousDespair = useRef({ seeker: seekerDespair, employer: employerDespair });
-
-  useEffect(() =>
-  {
-    const seekerGained = seekerDespair > previousDespair.current.seeker;
-    const employerGained = employerDespair > previousDespair.current.employer;
-
-    if (seekerGained || employerGained)
-    {
-      setIsHit(true);
-      const timeout = setTimeout(() => setIsHit(false), 700);
-      previousDespair.current = { seeker: seekerDespair, employer: employerDespair };
-      return () => clearTimeout(timeout);
-    }
-
-    previousDespair.current = { seeker: seekerDespair, employer: employerDespair };
-  }, [seekerDespair, employerDespair]);
 
   const peakDespair = Math.max(seekerDespair, employerDespair);
   const isCritical = peakDespair >= 85;
-  const hireSituationLabel = useHireSituationMessage(positionsFilled, peakDespair);
+  const { message: hireSituationLabel, flashKey } = useHireSituationMessage(
+    positionsFilled,
+    peakDespair,
+  );
 
   return (
     <div className="rounded border border-corp-border bg-corp-panel px-3 py-2.5">
       <div className="mb-1.5 flex w-full justify-center px-1">
         <span
+          key={flashKey}
           className={`despair-label font-pixel text-center text-[8px] leading-snug lg:text-[9px] ${
-            isHit ? 'despair-label-hit' : ''
+            flashKey > 0 ? 'despair-label-flash' : ''
           } ${isCritical ? 'text-corp-red' : 'text-corp-muted'}`}
         >
           {hireSituationLabel}
