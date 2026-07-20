@@ -61,7 +61,7 @@ export function Layout()
             className="shrink-0 justify-self-end rounded border border-corp-border px-3 py-1.5 text-xs text-corp-muted hover:text-corp-red"
             title="Reset save"
           >
-            Reset
+            Give Up
           </button>
         </div>
       </header>

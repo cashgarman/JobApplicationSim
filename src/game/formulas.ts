@@ -7,11 +7,14 @@ import {
   BASE_LOAN_INTEREST_PER_SEC,
   BASE_REVENUE_DRAIN_PER_SEC,
   BASE_SAVINGS_DRAIN_PER_SEC,
+  APPLICATION_COST,
   DEBT_DESPAIR_PER_SEC,
   DEBT_DESPAIR_REFERENCE,
   DESPAIR_MAX,
   EMPLOYER_DESPAIR_PER_SEC,
   LOAN_INTEREST_ESCALATION,
+  LOAN_DESPAIR_BASE_RELIEF,
+  LOAN_DESPAIR_DECAY,
   HUMAN_INTERVIEW_FAIL_MESSAGES,
   HUMAN_INTERVIEW_FILL_RATE,
   HUMAN_INTERVIEW_MESSAGES,
@@ -90,6 +93,12 @@ export function formatLoanApr(loansTaken: number): string
 {
   const annualized = getLoanInterestRate(loansTaken) * 365 * 24 * 3600 * 100;
   return `${Math.floor(annualized)}%`;
+}
+
+export function getLoanDespairRelief(loansTakenBefore: number): number
+{
+  const loanNumber = loansTakenBefore + 1;
+  return LOAN_DESPAIR_BASE_RELIEF * Math.pow(LOAN_DESPAIR_DECAY, loanNumber - 1);
 }
 
 export function getDebtDespairBonus(debt: number): number
@@ -372,7 +381,7 @@ export function getActiveSubscriptionCount(state: GameState): number
 export function getAgencyStats(state: GameState): AgencyStats
 {
   const { seeker, employer } = state;
-  const applicationFees = seeker.applications * 4.99;
+  const applicationFees = seeker.applications * APPLICATION_COST;
   const seekerSpend = Math.max(0, INITIAL_SAVINGS - seeker.savings);
   const totalBilled = employer.aiRecruitmentSpend + applicationFees + seekerSpend * 0.4;
   const agencyProfit = totalBilled * 0.88;

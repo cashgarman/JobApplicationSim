@@ -10,7 +10,8 @@ export const DEBT_DESPAIR_REFERENCE = 10000;
 export const DEBT_DESPAIR_PER_SEC = 0.04;
 export const SEEKER_LOAN_LOW_FUNDS = 1000;
 export const EMPLOYER_LOAN_LOW_FUNDS = 2000;
-export const LOAN_DESPAIR_BUMP = 0.5;
+export const LOAN_DESPAIR_BASE_RELIEF = 10;
+export const LOAN_DESPAIR_DECAY = 0.55;
 
 export const DESPAIR_FLAVOR_TIERS: { min: number; messages: string[] }[] = [
   {
@@ -58,6 +59,7 @@ export const DESPAIR_FLAVOR_TIERS: { min: number; messages: string[] }[] = [
 export const INITIAL_SAVINGS = 5000;
 export const INITIAL_REVENUE = 10000;
 export const BASE_SAVINGS_DRAIN_PER_SEC = 0.5;
+export const APPLICATION_COST = 4.99;
 export const BASE_REVENUE_DRAIN_PER_SEC = 1;
 export const REVENUE_PENALTY_PER_OPEN_ROLE = 0.05;
 
@@ -91,6 +93,31 @@ export const REJECTION_MESSAGES = [
   "Rejected: You don't have a GitHub. Where's your passion?",
   "Rejected: Position closed. We forgot to take down the listing.",
   "Rejected: Thank you for your interest. (Generic template #4,847)",
+  "Rejected: $4.99 application fee non-refundable. Rejection included at no extra charge.",
+  "Rejected: Recruiter viewed your profile. Recruiter did not view your profile.",
+  "Rejected: Role requires unpaid trial week. You declined. Coward.",
+  "Rejected: Your unemployment is showing.",
+  "Rejected: Perfect match! We hired the CEO's nephew instead.",
+  "Rejected: AI summary: 'Candidate seems desperate.' Accurate.",
+  "Rejected: Must be local. Remote means local. Local means onsite.",
+  "Rejected: You answered 'Why us?' with honesty. Disqualified.",
+  "Rejected: Portfolio too good. You'd make us look bad.",
+  "Rejected: Portfolio missing. Where is your unpaid labor sample?",
+  "Rejected: Visa sponsorship unavailable. Role posted globally anyway.",
+  "Rejected: Age inferred from graduation year. Math is cruel.",
+  "Rejected: Neurodivergent communication style flagged as 'low EQ.'",
+  "Rejected: You asked about work-life balance. Next.",
+  "Rejected: Mandatory 7-round process canceled after round 1. Ghosted.",
+  "Rejected: We loved your experience! Posted by intern. Intern left.",
+  "Rejected: ATS score 12%. Nephew score: N/A. Nephew hired.",
+  "Rejected: Cover letter detected personality. Please be a PDF.",
+  "Rejected: Referred by employee. Referral bonus canceled. Still rejected.",
+  "Rejected: Job posted 400 days ago. Still 'actively hiring.'",
+  "Rejected: Required skill: unpaid enthusiasm.",
+  "Rejected: Your thank-you email was too grateful. Needy.",
+  "Rejected: Your thank-you email never sent. Not hungry enough.",
+  "Rejected: Coding test completed. Test graded by intern. Intern busy.",
+  "Rejected: Background check clear. Vibes check failed.",
 ];
 
 export const AI_INTERVIEW_MESSAGES = [
@@ -184,6 +211,56 @@ export const FLOAT_TEXT_SEEKER_BAD = [
   'We regret to inform',
   'Culture mismatch',
   'Overqualified',
+  'ATS says no',
+  'Not hungry enough',
+  'Keyword missing',
+  'Parsing failed',
+  'Too employable',
+  'Too human',
+  'Instant reject',
+  'Application void',
+  'Paid to apply',
+  'Dignity deducted',
+  'Hope expired',
+  'Read: ignored',
+  'Role was fake',
+  'Ghost job',
+  'Went internal',
+  'Budget: vibes',
+  'Spirit animal: no',
+  'Referral only',
+  'LinkedIn theater',
+  'Pipeline mulch',
+  'Resume compost',
+  'Skill gap (fiction)',
+  'AI said pass',
+  'Black hole',
+  'Seen. Ignored.',
+  '404: Humanity',
+  'Thanks for the fee',
+  'Open role: closed',
+  'Hiring freeze forever',
+  'Culture fit: 3%',
+  'Salary too alive',
+  'Salary too dead',
+  'Bootcamp invalid',
+  'Degree insufficient',
+  'Gap detected',
+  'Enthusiasm flagged',
+  'Side project sin',
+  'No GitHub passion',
+  'Too many jobs',
+  'Too few jobs',
+  'Wrong timezone',
+  'Wrong font',
+  'Applied too early',
+  'Applied too late',
+  'Not a team player',
+  'Overqualified (cheap)',
+  'Underqualified (free)',
+  'Invoice received',
+  'Funnel working',
+  'Agency thanks you',
 ];
 
 export const FLOAT_TEXT_SEEKER_HOPE = [

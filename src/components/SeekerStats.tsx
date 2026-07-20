@@ -32,7 +32,7 @@ export function SeekerStats()
   const seeker = useGameStore((s) => s.state.seeker);
 
   return (
-    <div className="rounded border border-corp-green/50 bg-corp-panel p-3">
+    <div className="side-column-stats h-full rounded border border-corp-green/50 bg-corp-panel p-3">
       <StatRow
         label="$ Savings"
         value={formatCurrency(seeker.savings)}

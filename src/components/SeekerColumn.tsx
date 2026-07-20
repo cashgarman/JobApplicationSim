@@ -1,17 +1,18 @@
-import type { CSSProperties } from 'react';
-import { ApplicantView } from './ApplicantView';
-import { DespairGlitchOverlay } from './DespairGlitchOverlay';
+import { DirePanel } from './DirePanel';
 import { FloatingTextLayer } from './FloatingTextLayer';
+import { LoanButton } from './LoanButton';
 import { SeekerStats } from './SeekerStats';
 import { useDismalFlash } from '../hooks/useDismalFlash';
-import { useDespairGlitchIntensity } from '../hooks/useDespairGlitchIntensity';
 import { useGameStore } from '../store/gameStore';
 
 export function SeekerColumn()
 {
   const dismayFlash = useDismalFlash('seeker');
-  const seekerDespair = useGameStore((s) => s.state.seekerDespair);
-  const glitchIntensity = useDespairGlitchIntensity(seekerDespair);
+  const state = useGameStore((s) => s.state);
+  const clickApply = useGameStore((s) => s.clickApply);
+  const takeSeekerLoan = useGameStore((s) => s.takeSeekerLoan);
+  const { seeker } = state;
+  const broke = seeker.savings <= 0;
 
   return (
     <div
@@ -21,21 +22,37 @@ export function SeekerColumn()
     >
       <div className="pointer-events-none absolute inset-0 rounded bg-green-500/30" />
       <div className="seeker-dismal-vignette pointer-events-none absolute inset-0" />
-      <DespairGlitchOverlay side="seeker" intensity={glitchIntensity} />
-      <div
-        className={`relative z-10 flex h-full min-h-0 flex-col ${glitchIntensity > 0 ? 'despair-glitch-content' : ''}`}
-        style={glitchIntensity > 0 ? { '--glitch-intensity': glitchIntensity } as CSSProperties : undefined}
-      >
-        <div className="shrink-0 text-center">
+      <div className="relative z-10 flex h-full min-h-0 flex-col">
+        <div className="side-column-header shrink-0 text-center">
           <i className="fa-solid fa-user-tie seeker-droop mb-1 text-2xl text-corp-text lg:text-3xl" />
           <h2 className="font-pixel text-xs text-corp-green lg:text-sm">Job Seeker</h2>
           <p className="seeker-sigh text-sm text-corp-red lg:text-base">qualified, rejected, billed</p>
         </div>
-        <div className="mt-2 shrink-0">
+        <div className="side-column-stats mt-2 shrink-0">
           <SeekerStats />
         </div>
-        <div className="mt-2 min-h-0 flex-1">
-          <ApplicantView />
+        <div className="side-column-actions mt-2 shrink-0 text-center">
+          <button
+            type="button"
+            onClick={clickApply}
+            className="btn-green side-column-primary-btn font-pixel rounded"
+          >
+            Apply Into the Void
+          </button>
+          {broke && (
+            <p className="mt-1.5 text-xs text-corp-red">
+              Savings depleted. The grind does not pause for bankruptcy.
+            </p>
+          )}
+          <LoanButton
+            side="seeker"
+            loansTaken={seeker.loansTaken}
+            despair={state.seekerDespair}
+            onTakeLoan={takeSeekerLoan}
+          />
+        </div>
+        <div className="mt-2 flex min-h-0 flex-1 flex-col">
+          <DirePanel side="seeker" />
         </div>
       </div>
       <FloatingTextLayer column="seeker" />

@@ -3,14 +3,15 @@ import type { FeedEvent, GameState, Perspective } from '../game/types';
 import {
   EMPLOYER_LOAN_AMOUNT,
   EMPLOYER_LOAN_MESSAGES,
-  LOAN_DESPAIR_BUMP,
   SEEKER_LOAN_AMOUNT,
   SEEKER_LOAN_MESSAGES,
   pickRandom,
 } from '../game/constants';
 import { getGeneratorById, getUpgradeById } from '../game/upgrades';
-import { getUpgradeCost, checkGameOver, clampDespair } from '../game/formulas';
+import { getUpgradeCost, checkGameOver, clampDespair, getLoanDespairRelief } from '../game/formulas';
 import { createFeedEvent, createInitialState, processApplication, tickGame } from '../game/tick';
+import { processPendingRolePosts, scheduleRolePost } from '../game/rolePost';
+import type { PendingRolePost } from '../game/rolePost';
 import { getInitialState, saveGame } from '../game/save';
 import { useAnimationStore } from './animationStore';
 
@@ -20,6 +21,7 @@ interface GameStore
 {
   state: GameState;
   feedEvents: FeedEvent[];
+  pendingRolePosts: PendingRolePost[];
   startGame: () => void;
   togglePerspective: () => void;
   clickApply: () => void;
@@ -45,6 +47,7 @@ function addFeedEvents(existing: FeedEvent[], newEvents: FeedEvent[]): FeedEvent
 export const useGameStore = create<GameStore>((set, get) => ({
   state: getInitialState(),
   feedEvents: [],
+  pendingRolePosts: [],
 
   startGame: () =>
   {
@@ -111,24 +114,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
+    const openRoles = store.state.employer.openRoles + 1;
+    const applicantCount = Math.floor(200 + Math.random() * 600);
     const state = checkGameOver({
       ...store.state,
       employer: {
         ...store.state.employer,
-        openRoles: store.state.employer.openRoles + 1,
+        openRoles,
         revenue: store.state.employer.revenue + 5,
       },
       employerDespair: Math.min(100, store.state.employerDespair + 1.5),
     });
     const feedEvents = addFeedEvents(store.feedEvents, [
       createFeedEvent(
-        'Posted another role. Applicant flood incoming. AI ready to reject.',
+        `Employer: Posted role #${openRoles}. AI screening ${applicantCount} applicants.`,
         'employer',
       ),
     ]);
+    const pendingRolePosts = [
+      ...store.pendingRolePosts,
+      scheduleRolePost(openRoles, applicantCount),
+    ];
     useAnimationStore.setState({ employerDismayPulse: Date.now() });
     persist(state);
-    set({ state, feedEvents });
+    set({ state, feedEvents, pendingRolePosts });
   },
 
   buyUpgrade: (upgradeId: string) =>
@@ -282,6 +291,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
+    const despairRelief = getLoanDespairRelief(store.state.seeker.loansTaken);
     const state = checkGameOver({
       ...store.state,
       seeker: {
@@ -290,10 +300,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
         debt: store.state.seeker.debt + SEEKER_LOAN_AMOUNT,
         loansTaken: store.state.seeker.loansTaken + 1,
       },
-      seekerDespair: clampDespair(store.state.seekerDespair + LOAN_DESPAIR_BUMP),
+      seekerDespair: clampDespair(store.state.seekerDespair - despairRelief),
     });
     const feedEvents = addFeedEvents(store.feedEvents, [
-      createFeedEvent(pickRandom(SEEKER_LOAN_MESSAGES), 'neutral'),
+      createFeedEvent(pickRandom(SEEKER_LOAN_MESSAGES), 'seeker'),
     ]);
     persist(state);
     set({ state, feedEvents });
@@ -307,6 +317,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
 
+    const despairRelief = getLoanDespairRelief(store.state.employer.loansTaken);
     const state = checkGameOver({
       ...store.state,
       employer: {
@@ -315,7 +326,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         debt: store.state.employer.debt + EMPLOYER_LOAN_AMOUNT,
         loansTaken: store.state.employer.loansTaken + 1,
       },
-      employerDespair: clampDespair(store.state.employerDespair + LOAN_DESPAIR_BUMP),
+      employerDespair: clampDespair(store.state.employerDespair - despairRelief),
     });
     const feedEvents = addFeedEvents(store.feedEvents, [
       createFeedEvent(pickRandom(EMPLOYER_LOAN_MESSAGES), 'employer'),
@@ -333,9 +344,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     const { state, events } = tickGame(store.state);
-    if (events.length > 0)
+    const roleResolution = processPendingRolePosts(store.pendingRolePosts, state);
+    const resolvedRoleEvents = roleResolution.events.map((event) =>
+      createFeedEvent(event.message, event.type),
+    );
+    const allNewEvents = [...events, ...resolvedRoleEvents];
+    if (allNewEvents.length > 0)
     {
-      const sampled = events.find(
+      const sampled = allNewEvents.find(
         (e) =>
           e.type === 'rejection'
           || e.type === 'aiInterview'
@@ -357,11 +373,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         });
       }
     }
-    const feedEvents = events.length > 0
-      ? addFeedEvents(store.feedEvents, events)
+    const feedEvents = allNewEvents.length > 0
+      ? addFeedEvents(store.feedEvents, allNewEvents)
       : store.feedEvents;
-    persist(state);
-    set({ state, feedEvents });
+    persist(roleResolution.state);
+    set({
+      state: roleResolution.state,
+      feedEvents,
+      pendingRolePosts: roleResolution.remaining,
+    });
   },
 
   resetGame: () =>
@@ -369,6 +389,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const state = createInitialState();
     persist(state);
     useAnimationStore.getState().clearAll();
-    set({ state, feedEvents: [] });
+    set({ state, feedEvents: [], pendingRolePosts: [] });
   },
 }));

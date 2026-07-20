@@ -1,11 +1,8 @@
 import type { FeedEvent, GameState, OutcomeResult } from './types';
 import {
-  EMPLOYER_MESSAGES,
   INITIAL_REVENUE,
   INITIAL_SAVINGS,
-  INTEREST_FEED_MESSAGES,
-  NEUTRAL_MESSAGES,
-  pickRandom,
+  APPLICATION_COST,
 } from './constants';
 import {
   applyDespairTick,
@@ -80,6 +77,7 @@ function applyOutcome(state: GameState, result: OutcomeResult): GameState
   let employerDespair = clampDespair(state.employerDespair + result.employerDespairGain);
 
   seeker.applications += 1;
+  seeker.savings = Math.max(0, seeker.savings - APPLICATION_COST);
 
   switch (result.outcome)
   {
@@ -208,13 +206,19 @@ export function applyDebtTick(state: GameState): {
     state.employer.loansTaken,
   );
 
-  if (seekerDebt.interestCharged > 0 && Math.random() < 0.04)
+  if (seekerDebt.interestCharged > 0 && seekerDebt.payment < seekerDebt.interestCharged)
   {
-    events.push(createFeedEvent(pickRandom(INTEREST_FEED_MESSAGES), 'neutral'));
+    events.push(createFeedEvent(
+      `Seeker: Missed $${Math.ceil(seekerDebt.interestCharged)} interest payment. Debt: $${Math.ceil(seekerDebt.debt)}.`,
+      'seeker',
+    ));
   }
-  if (employerDebt.interestCharged > 0 && Math.random() < 0.04)
+  if (employerDebt.interestCharged > 0 && employerDebt.payment < employerDebt.interestCharged)
   {
-    events.push(createFeedEvent(pickRandom(INTEREST_FEED_MESSAGES), 'employer'));
+    events.push(createFeedEvent(
+      `Employer: Missed $${Math.ceil(employerDebt.interestCharged)} interest payment. Debt: $${Math.ceil(employerDebt.debt)}.`,
+      'employer',
+    ));
   }
 
   return {
@@ -235,6 +239,44 @@ export function applyDebtTick(state: GameState): {
   };
 }
 
+function createDrainEvents(before: GameState, after: GameState): FeedEvent[]
+{
+  const events: FeedEvent[] = [];
+  const prevSavings = before.seeker.savings;
+  const nextSavings = after.seeker.savings;
+
+  if (prevSavings > 0 && nextSavings <= 0)
+  {
+    events.push(createFeedEvent('Seeker: Savings depleted. The search continues anyway.', 'seeker'));
+  }
+  else if (prevSavings >= 1000 && nextSavings < 1000)
+  {
+    events.push(createFeedEvent('Seeker: Savings dropped below $1,000.', 'seeker'));
+  }
+  else if (prevSavings >= 2500 && nextSavings < 2500)
+  {
+    events.push(createFeedEvent('Seeker: Living costs consumed half the runway.', 'seeker'));
+  }
+
+  const prevRevenue = before.employer.revenue;
+  const nextRevenue = after.employer.revenue;
+
+  if (prevRevenue > 0 && nextRevenue <= 0)
+  {
+    events.push(createFeedEvent('Employer: Revenue hit zero. Open roles remain.', 'employer'));
+  }
+  else if (prevRevenue >= 5000 && nextRevenue < 5000)
+  {
+    events.push(createFeedEvent('Employer: Revenue fell below $5,000.', 'employer'));
+  }
+  else if (prevRevenue >= 10000 && nextRevenue < 10000)
+  {
+    events.push(createFeedEvent('Employer: Burn rate is winning.', 'employer'));
+  }
+
+  return events;
+}
+
 export function tickGame(state: GameState): {
   state: GameState;
   events: FeedEvent[];
@@ -250,6 +292,7 @@ export function tickGame(state: GameState): {
     ...state,
     totalPlaySeconds: state.totalPlaySeconds + 1,
   };
+  const beforeDrain = current;
 
   const savingsDrain = getSavingsDrainPerSec(current);
   current = {
@@ -279,14 +322,7 @@ export function tickGame(state: GameState): {
     events.push(...appEvents);
   }
 
-  if (Math.random() < 0.08)
-  {
-    events.push(createFeedEvent(pickRandom(EMPLOYER_MESSAGES), 'employer'));
-  }
-  else if (Math.random() < 0.03)
-  {
-    events.push(createFeedEvent(pickRandom(NEUTRAL_MESSAGES), 'neutral'));
-  }
+  events.push(...createDrainEvents(beforeDrain, current));
 
   const { state: afterDebt, events: debtEvents } = applyDebtTick(current);
   current = afterDebt;

@@ -44,7 +44,7 @@ export interface FeedEvent {
   id: string;
   message: string;
   timestamp: number;
-  type: 'rejection' | 'aiInterview' | 'humanInterview' | 'employer' | 'neutral';
+  type: 'rejection' | 'aiInterview' | 'humanInterview' | 'employer' | 'seeker' | 'neutral';
 }
 
 export type UpgradeSide = 'seeker' | 'employer';

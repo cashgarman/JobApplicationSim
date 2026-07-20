@@ -14,7 +14,6 @@ import type {
 const MAX_ICONS = 12;
 const MAX_FLOAT_TEXTS = 24;
 const ICON_LIFETIME_MS = 2500;
-const FLOAT_LIFETIME_MS = 1500;
 
 let animCounter = 0;
 
@@ -92,6 +91,11 @@ function addFloat(texts: FloatText[], text: FloatText): FloatText[]
   return [text, ...texts].slice(0, MAX_FLOAT_TEXTS);
 }
 
+function getFloatLifetimeMs(text: FloatText): number
+{
+  return (text.duration + text.delay) * 1000 + 500;
+}
+
 function createFloatVariation(): Pick<
   FloatText,
   'offsetX' | 'startBottom' | 'duration' | 'delay' | 'driftX' | 'riseY' | 'scale'
@@ -100,11 +104,11 @@ function createFloatVariation(): Pick<
   return {
     offsetX: randomBetween(-45, 45),
     startBottom: randomBetween(12, 58),
-    duration: randomBetween(1.3, 2.6),
-    delay: randomBetween(0, 0.35),
-    driftX: randomBetween(-30, 30),
-    riseY: randomBetween(-55, -95),
-    scale: randomBetween(0.85, 1.2),
+    duration: randomBetween(3.8, 5.2),
+    delay: randomBetween(0, 0.3),
+    driftX: randomBetween(-24, 24),
+    riseY: randomBetween(-38, -68),
+    scale: randomBetween(1.12, 1.48),
   };
 }
 
@@ -168,7 +172,7 @@ export const useAnimationStore = create<AnimationStore>((set, get) => ({
           icons,
           makeIcon('rejection', 'aiToSeeker', result.message, now),
         );
-        texts = spawnFloat(texts, 'seeker', 'bad', 'REJECTED');
+        texts = spawnFloat(texts, 'seeker', 'bad');
         texts = spawnFloat(texts, 'ai', 'bad');
         seekerDismayPulse = now;
         employerDismayPulse = now;
@@ -202,7 +206,7 @@ export const useAnimationStore = create<AnimationStore>((set, get) => ({
                 makeIcon('rejection', 'aiToSeeker', 'Rescheduled to AI screen', Date.now()),
               ),
               floatTexts: spawnFloat(
-                spawnFloat(state.floatTexts, 'seeker', 'bad', 'Rescheduled to AI'),
+                spawnFloat(state.floatTexts, 'seeker', 'bad'),
                 'ai',
                 'bad',
               ),
@@ -230,7 +234,7 @@ export const useAnimationStore = create<AnimationStore>((set, get) => ({
         (icon) => now - icon.createdAt < ICON_LIFETIME_MS,
       ),
       floatTexts: store.floatTexts.filter(
-        (text) => now - text.createdAt < FLOAT_LIFETIME_MS,
+        (text) => now - text.createdAt < getFloatLifetimeMs(text),
       ),
     }));
   },

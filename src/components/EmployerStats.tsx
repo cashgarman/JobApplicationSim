@@ -32,7 +32,7 @@ export function EmployerStats()
   const employer = useGameStore((s) => s.state.employer);
 
   return (
-    <div className="rounded border border-corp-green/50 bg-corp-panel p-3">
+    <div className="side-column-stats h-full rounded border border-corp-green/50 bg-corp-panel p-3">
       <StatRow
         label="AI Money Burned"
         value={formatCurrency(employer.aiRecruitmentSpend)}

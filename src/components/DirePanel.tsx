@@ -1,4 +1,8 @@
+import type { CSSProperties } from 'react';
 import { useMemo } from 'react';
+import { DespairGlitchOverlay } from './DespairGlitchOverlay';
+import { GlitchText } from './GlitchText';
+import { useDespairGlitchIntensity } from '../hooks/useDespairGlitchIntensity';
 import { useGameStore } from '../store/gameStore';
 
 interface DirePanelProps
@@ -72,6 +76,8 @@ function getEmployerLines(employer: {
 export function DirePanel({ side }: DirePanelProps)
 {
   const state = useGameStore((s) => s.state);
+  const despair = side === 'seeker' ? state.seekerDespair : state.employerDespair;
+  const glitchIntensity = useDespairGlitchIntensity(despair);
   const lines = useMemo(
     () =>
       side === 'seeker'
@@ -84,17 +90,37 @@ export function DirePanel({ side }: DirePanelProps)
   const titleClass = side === 'seeker' ? 'text-corp-red' : 'text-corp-amber';
 
   return (
-    <div className={`mt-3 flex min-h-0 flex-1 flex-col rounded border ${accentClass} bg-corp-bg/80 p-3`}>
-      <h3 className={`font-pixel mb-2 text-[10px] ${titleClass} lg:text-xs`}>
-        {side === 'seeker' ? 'The Seeker\'s Reality' : 'The Employer\'s Trap'}
-      </h3>
-      <ul className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1 text-xs leading-relaxed text-corp-muted lg:text-sm">
-        {lines.map((line) => (
-          <li key={line} className="border-b border-corp-border/40 pb-2 last:border-0">
-            {line}
-          </li>
-        ))}
-      </ul>
+    <div
+      className={`relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded border ${accentClass} bg-corp-bg/80 p-3`}
+    >
+      {glitchIntensity > 0 && (
+        <DespairGlitchOverlay side={side} intensity={glitchIntensity} />
+      )}
+      <div
+        className={`relative z-10 flex min-h-0 flex-1 flex-col ${glitchIntensity > 0 ? 'despair-glitch-text' : ''}`}
+        style={
+          glitchIntensity > 0
+            ? { '--glitch-intensity': glitchIntensity } as CSSProperties
+            : undefined
+        }
+      >
+        <h3 className={`font-pixel mb-2 shrink-0 text-[10px] ${titleClass} lg:text-xs`}>
+          <GlitchText
+            text={side === 'seeker' ? 'The Seeker\'s Reality' : 'The Employer\'s Trap'}
+            intensity={glitchIntensity}
+          />
+        </h3>
+        <ul className="dire-panel-list min-h-0 flex-1 text-xs leading-relaxed text-corp-muted lg:text-sm">
+          {lines.map((line) => (
+            <li
+              key={line}
+              className="dire-panel-line border-b border-corp-border/40 last:border-0"
+            >
+              <GlitchText text={line} intensity={glitchIntensity} />
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

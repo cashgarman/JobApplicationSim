@@ -6,14 +6,24 @@ const TYPE_COLORS: Record<string, string> = {
   aiInterview: 'text-corp-amber',
   humanInterview: 'text-corp-green',
   employer: 'text-corp-muted',
+  seeker: 'text-corp-green',
   neutral: 'text-corp-text',
 };
+
+const SYSTEM_LOG_TYPES = new Set([
+  'rejection',
+  'aiInterview',
+  'humanInterview',
+  'employer',
+  'seeker',
+]);
 
 const COMPACT_LOG_COLORS: Record<string, string> = {
   rejection: 'text-gray-200',
   aiInterview: 'text-amber-200',
   humanInterview: 'text-emerald-300',
-  employer: 'text-corp-muted',
+  employer: 'text-blue-200',
+  seeker: 'text-green-200',
   neutral: 'text-corp-text',
 };
 
@@ -25,7 +35,9 @@ interface EventFeedProps
 export function EventFeed({ compact = false }: EventFeedProps)
 {
   const feedEvents = useGameStore((s) => s.feedEvents);
-  const visibleEvents = compact ? feedEvents.slice(0, 8) : feedEvents.slice(0, 8);
+  const visibleEvents = compact
+    ? feedEvents.filter((event) => SYSTEM_LOG_TYPES.has(event.type)).slice(0, 8)
+    : feedEvents.slice(0, 8);
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden rounded border border-corp-border bg-corp-bg">
