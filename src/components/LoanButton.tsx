@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { getLoanOverlapProgress } from '../game/actionLabels';
+import { getLoanBlockOpacity, getLoanOverlapProgress } from '../game/actionLabels';
 import { DESPAIR_MAX } from '../game/constants';
 import { formatLoanApr } from '../game/formulas';
 import { useDespairGlitchIntensity } from '../hooks/useDespairGlitchIntensity';
@@ -20,9 +20,9 @@ export function LoanButton({ side, loansTaken, despair, onTakeLoan }: LoanButton
   const caption = `APR: ${apr} · Loans taken: ${loansTaken}`;
   const despairRatio = Math.min(1, Math.max(0, despair / DESPAIR_MAX));
   const overlapProgress = getLoanOverlapProgress(despair);
+  const blockOpacity = getLoanBlockOpacity(despair);
   const despairCritical = despairRatio >= 0.9;
   const glitchIntensity = useDespairGlitchIntensity(despair);
-  const overlapOpacity = overlapProgress > 0 ? 0.68 + overlapProgress * 0.32 : 1;
 
   return (
     <div
@@ -30,7 +30,7 @@ export function LoanButton({ side, loansTaken, despair, onTakeLoan }: LoanButton
       style={{
         '--loan-despair-ratio': despairRatio,
         '--loan-overlap-progress': overlapProgress,
-        opacity: overlapOpacity,
+        '--loan-block-opacity': blockOpacity,
       } as CSSProperties}
     >
       <button

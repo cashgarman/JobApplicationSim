@@ -1,0 +1,14 @@
+{
+  "economy": {
+    "humanInterviewFillRate": 0.00015,
+    "rolePostFillChance": 0.04,
+    "savingsDrainPerSec": 0.5,
+    "revenueDrainPerSec": 1,
+    "baseAiSpendPerSec": 0.12,
+    "hrInternAiSpendPerSec": 0.2,
+    "outsourcedRecruiterAiSpendPerSec": 0.5,
+    "subscriptionRevenuePerSale": 4.99,
+    "seekerDespairPerClick": 0.45,
+    "employerDespairPerClick": 1.5
+  }
+}

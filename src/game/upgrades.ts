@@ -61,7 +61,7 @@ export const SEEKER_UPGRADES: UpgradeDefinition[] = [
     id: 'bootcampCert',
     side: 'seeker',
     name: 'Third Bootcamp Certificate',
-    description: 'Diminishing returns. Employers still want 10 years experience.',
+    description: 'Diminishing returns. Companies still want 10 years experience.',
     baseCost: 2000,
     costMultiplier: 2.5,
     maxLevel: 3,

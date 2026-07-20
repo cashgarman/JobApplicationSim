@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const COLUMN_COUNT = 32;
+interface BinaryRainBackgroundProps
+{
+  fullScreen?: boolean;
+}
+
+const PANEL_COLUMN_COUNT = 32;
+const FULL_SCREEN_COLUMN_COUNT = 56;
 const CHARS_PER_COLUMN = 42;
 
 interface RainColumn
@@ -44,18 +50,20 @@ function charsToText(chars: string[]): string
   return chars.join('\n');
 }
 
-export function BinaryRainBackground()
+export function BinaryRainBackground({ fullScreen = false }: BinaryRainBackgroundProps)
 {
+  const columnCount = fullScreen ? FULL_SCREEN_COLUMN_COUNT : PANEL_COLUMN_COUNT;
+
   const initialColumns = useMemo(
     () =>
-      Array.from({ length: COLUMN_COUNT }, (_, index) => ({
+      Array.from({ length: columnCount }, (_, index) => ({
         id: index,
         chars: buildColumn(index + 1),
         duration: 3.5 + (index % 6) + (index % 3) * 0.35,
         delay: -(index * 0.5) % 7,
         opacity: 0.55 + (index % 5) * 0.09,
       })),
-    [],
+    [columnCount],
   );
 
   const [columns, setColumns] = useState<RainColumn[]>(initialColumns);
@@ -76,9 +84,15 @@ export function BinaryRainBackground()
   }, []);
 
   return (
-    <div className="binary-rain pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
+    <div
+      className={`binary-rain pointer-events-none absolute inset-0 overflow-hidden ${fullScreen ? 'binary-rain--fullscreen' : ''}`}
+      aria-hidden
+    >
       <div className="binary-rain-vignette absolute inset-0" />
-      <div className="binary-rain-grid absolute inset-0">
+      <div
+        className="binary-rain-grid absolute inset-0"
+        style={{ gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))` }}
+      >
         {columns.map((column) =>
         {
           const text = charsToText(column.chars);

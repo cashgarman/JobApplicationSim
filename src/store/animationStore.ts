@@ -5,6 +5,7 @@ import type {
   FloatText,
   FloatTextColumn,
   FloatTextTone,
+  DireFlavorLogEntry,
   OutcomeResult,
   PipelineIcon,
   PipelineIconKind,
@@ -13,6 +14,7 @@ import type {
 
 const MAX_ICONS = 12;
 const MAX_FLOAT_TEXTS = 24;
+const MAX_DIRE_FLAVOR_LOG = 16;
 const ICON_LIFETIME_MS = 2500;
 
 let animCounter = 0;
@@ -95,10 +97,14 @@ interface AnimationStore
 {
   pipelineIcons: PipelineIcon[];
   floatTexts: FloatText[];
+  seekerDireFlavorLog: DireFlavorLogEntry[];
+  employerDireFlavorLog: DireFlavorLogEntry[];
   seekerDismayPulse: number;
   employerDismayPulse: number;
   spawnFromOutcome: (result: OutcomeResult) => void;
   spawnApplicationSent: () => void;
+  spawnRolePosted: () => void;
+  appendEmployerDireFlavor: (text?: string) => void;
   pruneExpired: () => void;
   clearAll: () => void;
 }
@@ -182,6 +188,50 @@ function registerFloatLingerTransition(
   }, travelMs);
 }
 
+function appendDireFlavorLog(logs: DireFlavorLogEntry[], text: string): DireFlavorLogEntry[]
+{
+  return [
+    ...logs,
+    { id: nextId('dire-log'), text, createdAt: Date.now() },
+  ].slice(-MAX_DIRE_FLAVOR_LOG);
+}
+
+function addSeekerRejectionFloat(
+  texts: FloatText[],
+  icon: PipelineIcon,
+  lingerHandlers: {
+    getState: () => AnimationStore;
+    setState: (partial: Partial<AnimationStore> | ((state: AnimationStore) => Partial<AnimationStore>)) => void;
+  },
+  textOverride?: string,
+): { texts: FloatText[]; float: FloatText }
+{
+  const float = makeFloatForIcon(icon, 'seeker', 'bad', textOverride, { lingerAtDestination: true });
+  registerFloatLingerTransition(float, lingerHandlers.getState, lingerHandlers.setState);
+  return {
+    texts: addFloat(texts, float),
+    float,
+  };
+}
+
+function addEmployerHiringFloat(
+  texts: FloatText[],
+  icon: PipelineIcon,
+  lingerHandlers: {
+    getState: () => AnimationStore;
+    setState: (partial: Partial<AnimationStore> | ((state: AnimationStore) => Partial<AnimationStore>)) => void;
+  },
+  textOverride?: string,
+): { texts: FloatText[]; float: FloatText }
+{
+  const float = makeFloatForIcon(icon, 'employer', 'bad', textOverride, { lingerAtDestination: true });
+  registerFloatLingerTransition(float, lingerHandlers.getState, lingerHandlers.setState);
+  return {
+    texts: addFloat(texts, float),
+    float,
+  };
+}
+
 function addFloatForIcon(
   texts: FloatText[],
   icon: PipelineIcon,
@@ -212,6 +262,8 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
   return {
   pipelineIcons: [],
   floatTexts: [],
+  seekerDireFlavorLog: [],
+  employerDireFlavorLog: [],
   seekerDismayPulse: 0,
   employerDismayPulse: 0,
 
@@ -234,11 +286,38 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
     }));
   },
 
+  spawnRolePosted: () =>
+  {
+    const now = Date.now();
+    const roleIcon = makeIcon('application', 'employerToAi', 'Role posted', now);
+    const hiringFloat = addEmployerHiringFloat(get().floatTexts, roleIcon, lingerHandlers);
+
+    set((store) => ({
+      pipelineIcons: addIcon(store.pipelineIcons, roleIcon),
+      floatTexts: hiringFloat.texts,
+      employerDireFlavorLog: appendDireFlavorLog(
+        store.employerDireFlavorLog,
+        hiringFloat.float.text,
+      ),
+      employerDismayPulse: now,
+    }));
+  },
+
+  appendEmployerDireFlavor: (text?: string) =>
+  {
+    const flavorText = text ?? pickFloat('employer', 'bad');
+    set((store) => ({
+      employerDireFlavorLog: appendDireFlavorLog(store.employerDireFlavorLog, flavorText),
+      employerDismayPulse: Date.now(),
+    }));
+  },
+
   spawnFromOutcome: (result: OutcomeResult) =>
   {
     const now = Date.now();
     let icons = get().pipelineIcons;
     let texts = get().floatTexts;
+    let seekerDireFlavorLog = get().seekerDireFlavorLog;
     let seekerDismayPulse = get().seekerDismayPulse;
     let employerDismayPulse = get().employerDismayPulse;
 
@@ -251,9 +330,9 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
       {
         const rejectionIcon = makeIcon('rejection', 'aiToSeeker', result.message, now);
         icons = addIcon(icons, rejectionIcon);
-        texts = addFloatForIcon(texts, rejectionIcon, 'seeker', 'bad', undefined, {
-          lingerAtDestination: true,
-        }, lingerHandlers);
+        const rejectionFloat = addSeekerRejectionFloat(texts, rejectionIcon, lingerHandlers);
+        texts = rejectionFloat.texts;
+        seekerDireFlavorLog = appendDireFlavorLog(seekerDireFlavorLog, rejectionFloat.float.text);
         seekerDismayPulse = now;
         employerDismayPulse = now;
         break;
@@ -284,17 +363,18 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
               'Rescheduled to AI screen',
               Date.now(),
             );
+            const rejectionFloat = addSeekerRejectionFloat(
+              state.floatTexts,
+              rejectionIcon,
+              lingerHandlers,
+            );
 
             set({
               pipelineIcons: addIcon(state.pipelineIcons, rejectionIcon),
-              floatTexts: addFloatForIcon(
-                state.floatTexts,
-                rejectionIcon,
-                'seeker',
-                'bad',
-                undefined,
-                { lingerAtDestination: true },
-                lingerHandlers,
+              floatTexts: rejectionFloat.texts,
+              seekerDireFlavorLog: appendDireFlavorLog(
+                state.seekerDireFlavorLog,
+                rejectionFloat.float.text,
               ),
               seekerDismayPulse: Date.now(),
               employerDismayPulse: Date.now(),
@@ -308,6 +388,7 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
     set({
       pipelineIcons: icons.slice(0, MAX_ICONS),
       floatTexts: texts.slice(0, MAX_FLOAT_TEXTS),
+      seekerDireFlavorLog,
       seekerDismayPulse,
       employerDismayPulse,
     });
@@ -332,6 +413,8 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
     set({
       pipelineIcons: [],
       floatTexts: [],
+      seekerDireFlavorLog: [],
+      employerDireFlavorLog: [],
       seekerDismayPulse: 0,
       employerDismayPulse: 0,
     });

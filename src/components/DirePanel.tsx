@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react';
-import { useMemo } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { DespairGlitchOverlay } from './DespairGlitchOverlay';
 import { GlitchText } from './GlitchText';
 import { useDespairGlitchIntensity } from '../hooks/useDespairGlitchIntensity';
+import { useAnimationStore } from '../store/animationStore';
 import { useGameStore } from '../store/gameStore';
 
 interface DirePanelProps
@@ -76,6 +77,9 @@ function getEmployerLines(employer: {
 export function DirePanel({ side }: DirePanelProps)
 {
   const state = useGameStore((s) => s.state);
+  const flavorLog = useAnimationStore((s) =>
+    side === 'seeker' ? s.seekerDireFlavorLog : s.employerDireFlavorLog,
+  );
   const despair = side === 'seeker' ? state.seekerDespair : state.employerDespair;
   const glitchIntensity = useDespairGlitchIntensity(despair);
   const lines = useMemo(
@@ -85,6 +89,19 @@ export function DirePanel({ side }: DirePanelProps)
         : getEmployerLines(state.employer),
     [side, state.seeker, state.employer],
   );
+  const logRef = useRef<HTMLUListElement>(null);
+  const lastFlavorEntryId = flavorLog[flavorLog.length - 1]?.id;
+
+  useLayoutEffect(() =>
+  {
+    const log = logRef.current;
+    if (!log || !lastFlavorEntryId)
+    {
+      return;
+    }
+
+    log.scrollTop = log.scrollHeight;
+  }, [lastFlavorEntryId]);
 
   const accentClass = side === 'seeker' ? 'border-corp-red/40' : 'border-corp-amber/40';
   const titleClass = side === 'seeker' ? 'text-corp-red' : 'text-corp-amber';
@@ -106,17 +123,30 @@ export function DirePanel({ side }: DirePanelProps)
       >
         <h3 className={`font-pixel mb-2 shrink-0 text-[10px] ${titleClass} lg:text-xs`}>
           <GlitchText
-            text={side === 'seeker' ? 'The Seeker\'s Reality' : 'The Employer\'s Trap'}
+            text={side === 'seeker' ? 'The Seeker\'s Reality' : 'The Companies\' Trap'}
             intensity={glitchIntensity}
           />
         </h3>
-        <ul className="dire-panel-list min-h-0 flex-1 text-xs leading-relaxed text-corp-muted lg:text-sm">
+        <ul
+          ref={logRef}
+          className="dire-panel-list min-h-0 flex-1 text-xs leading-relaxed text-corp-muted lg:text-sm"
+        >
           {lines.map((line) => (
             <li
               key={line}
               className="dire-panel-line border-b border-corp-border/40 last:border-0"
             >
               <GlitchText text={line} intensity={glitchIntensity} />
+            </li>
+          ))}
+          {flavorLog.map((entry) => (
+            <li
+              key={entry.id}
+              className={`dire-panel-line dire-panel-flavor border-b border-corp-border/40 last:border-0 ${
+                side === 'seeker' ? 'text-corp-red' : 'text-corp-amber'
+              }`}
+            >
+              <GlitchText text={entry.text} intensity={glitchIntensity} />
             </li>
           ))}
         </ul>

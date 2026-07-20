@@ -31,6 +31,7 @@ function migrateState(raw: Record<string, unknown>): GameState
   merged.employer = {
     ...initial.employer,
     ...merged.employer,
+    rolesPosted: merged.employer?.rolesPosted ?? 0,
     debt: merged.employer?.debt ?? 0,
     loansTaken: merged.employer?.loansTaken ?? 0,
   };

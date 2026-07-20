@@ -1,0 +1,8 @@
+{
+  "screen": {
+    "intensity": 0.2,
+    "tickIntervalMs": 520,
+    "corruptBudgetMultiplier": 0.05,
+    "minCorruptBudget": 1
+  }
+}

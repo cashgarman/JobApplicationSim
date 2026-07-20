@@ -1,13 +1,11 @@
 import type { GameState, OutcomeResult, SeekerState, EmployerState } from './types';
+import { economyConfig } from '../config/economy';
 import {
   AI_INTERVIEW_FAIL_MESSAGES,
   AI_INTERVIEW_FAIL_RATE,
   AI_INTERVIEW_MESSAGES,
   BASE_ATS,
   BASE_LOAN_INTEREST_PER_SEC,
-  BASE_REVENUE_DRAIN_PER_SEC,
-  BASE_SAVINGS_DRAIN_PER_SEC,
-  APPLICATION_COST,
   DEBT_DESPAIR_PER_SEC,
   DEBT_DESPAIR_REFERENCE,
   DESPAIR_GAIN_SCALE,
@@ -18,7 +16,6 @@ import {
   LOAN_DESPAIR_GAIN_COMPOUND,
   LOAN_DESPAIR_GAIN_ESCALATION,
   HUMAN_INTERVIEW_FAIL_MESSAGES,
-  HUMAN_INTERVIEW_FILL_RATE,
   HUMAN_INTERVIEW_MESSAGES,
   INITIAL_SAVINGS,
   REJECTION_MESSAGES,
@@ -138,6 +135,16 @@ export function getScaledEmployerDespairDelta(state: GameState, delta: number): 
   return scaleEmployerDespairDelta(delta) * getLoanDespairGainMultiplier(state.employer.loansTaken);
 }
 
+export function getSeekerClickDespairDelta(state: GameState): number
+{
+  return getScaledSeekerDespairDelta(state, economyConfig.seekerDespairPerClick);
+}
+
+export function getEmployerClickDespairDelta(state: GameState): number
+{
+  return getScaledEmployerDespairDelta(state, economyConfig.employerDespairPerClick);
+}
+
 export function getDebtDespairBonus(debt: number): number
 {
   if (debt <= 0)
@@ -243,7 +250,7 @@ export function rollApplicationOutcome(state: GameState): OutcomeResult
 
   if (roll < chances.humanInterview)
   {
-    const filled = Math.random() < HUMAN_INTERVIEW_FILL_RATE;
+    const filled = Math.random() < economyConfig.humanInterviewFillRate;
     if (filled)
     {
       return {
@@ -342,7 +349,7 @@ export function getApplicationsPerSec(state: GameState): number
 
 export function getSavingsDrainPerSec(state: GameState): number
 {
-  let drain = BASE_SAVINGS_DRAIN_PER_SEC;
+  let drain = economyConfig.savingsDrainPerSec;
   for (const upgrade of SEEKER_UPGRADES)
   {
     const level = getSeekerUpgradeLevel(state.seeker, upgrade.id);
@@ -354,7 +361,7 @@ export function getSavingsDrainPerSec(state: GameState): number
 
 export function getRevenueDrainPerSec(state: GameState): number
 {
-  let drain = BASE_REVENUE_DRAIN_PER_SEC;
+  let drain = economyConfig.revenueDrainPerSec;
   drain += state.employer.openRoles * 0.08;
   drain += state.employer.aiRecruitmentSpend * 0.000015;
 
@@ -370,17 +377,17 @@ export function getRevenueDrainPerSec(state: GameState): number
 
 export function getAiSpendPerSec(state: GameState): number
 {
-  let spend = 0;
+  let spend = economyConfig.baseAiSpendPerSec;
   for (const gen of ['hrIntern', 'outsourcedRecruiter'] as const)
   {
     const level = state.employer.generatorLevels[gen] ?? 0;
     if (gen === 'hrIntern')
     {
-      spend += level * 0.2;
+      spend += level * economyConfig.hrInternAiSpendPerSec;
     }
     else
     {
-      spend += level * 0.5;
+      spend += level * economyConfig.outsourcedRecruiterAiSpendPerSec;
     }
   }
 
@@ -407,23 +414,16 @@ export interface AgencyStats
 
 export function getActiveSubscriptionCount(state: GameState): number
 {
-  const sumLevels = (levels: Record<string, number>) =>
-    Object.values(levels).reduce((total, level) => total + level, 0);
-
-  return (
-    sumLevels(state.seeker.upgradeLevels)
-    + sumLevels(state.seeker.generatorLevels)
-    + sumLevels(state.employer.upgradeLevels)
-    + sumLevels(state.employer.generatorLevels)
-  );
+  return state.seeker.applications + state.employer.rolesPosted;
 }
 
 export function getAgencyStats(state: GameState): AgencyStats
 {
   const { seeker, employer } = state;
-  const applicationFees = seeker.applications * APPLICATION_COST;
+  const subscriptions = getActiveSubscriptionCount(state);
+  const subscriptionRevenue = subscriptions * economyConfig.subscriptionRevenuePerSale;
   const seekerSpend = Math.max(0, INITIAL_SAVINGS - seeker.savings);
-  const totalBilled = employer.aiRecruitmentSpend + applicationFees + seekerSpend * 0.4;
+  const totalBilled = subscriptionRevenue + employer.aiRecruitmentSpend + seekerSpend * 0.4;
   const agencyProfit = totalBilled * 0.88;
   const placements = employer.positionsFilled;
 
@@ -433,7 +433,7 @@ export function getAgencyStats(state: GameState): AgencyStats
     applicationsMonetized: seeker.applications,
     placementsMade: placements,
     costPerHire: placements > 0 ? formatCurrency(totalBilled / placements) : '∞',
-    activeSubscriptions: getActiveSubscriptionCount(state),
+    activeSubscriptions: subscriptions,
     humanityBlocked: seeker.rejections + seeker.aiInterviews,
     profitMargin: 88,
   };

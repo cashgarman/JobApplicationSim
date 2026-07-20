@@ -39,6 +39,11 @@ function getFloatTravelClass(text: {
     return 'float-text-linger float-text-linger--seeker';
   }
 
+  if (text.phase === 'linger' && text.path === 'employerToAi')
+  {
+    return 'float-text-linger float-text-linger--employer';
+  }
+
   return getFloatPathAnimationClass(text.path);
 }
 

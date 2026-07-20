@@ -1,4 +1,5 @@
 import type { FeedEvent, GameState } from './types';
+import { economyConfig } from '../config/economy';
 import { checkGameOver, getScaledEmployerDespairDelta, clampDespair } from './formulas';
 import { pickRandom } from './constants';
 
@@ -18,27 +19,27 @@ export interface RolePostResolution
 }
 
 const FILLED_MESSAGES = (roleNumber: number) => [
-  `Employer: Role #${roleNumber} filled. Candidate starts Monday. AI takes credit.`,
-  `Employer: Role #${roleNumber} closed. Offer accepted. ATS still shows "Under Review."`,
-  `Employer: Role #${roleNumber} filled after 47 rounds. Miracles happen.`,
+  `Companies: Role #${roleNumber} filled. Candidate starts Monday. AI takes credit.`,
+  `Companies: Role #${roleNumber} closed. Offer accepted. ATS still shows "Under Review."`,
+  `Companies: Role #${roleNumber} filled after 47 rounds. Miracles happen.`,
 ];
 
 const NO_CANDIDATES_MESSAGES = (roleNumber: number, applicants: number) => [
-  `Employer: Role #${roleNumber} — AI screened ${applicants} applicants. Zero qualified.`,
-  `Employer: Role #${roleNumber} pipeline empty. Requirements raised again.`,
-  `Employer: Role #${roleNumber} — perfect candidates exist. ATS disagrees.`,
+  `Companies: Role #${roleNumber} — AI screened ${applicants} applicants. Zero qualified.`,
+  `Companies: Role #${roleNumber} pipeline empty. Requirements raised again.`,
+  `Companies: Role #${roleNumber} — perfect candidates exist. ATS disagrees.`,
 ];
 
 const STALLED_MESSAGES = (roleNumber: number, applicants: number) => [
-  `Employer: Role #${roleNumber} — ${applicants} applicants stuck in AI review limbo.`,
-  `Employer: Role #${roleNumber} still open. Top candidate ghosted after round 6.`,
-  `Employer: Role #${roleNumber} — hiring manager "will circle back next quarter."`,
+  `Companies: Role #${roleNumber} — ${applicants} applicants stuck in AI review limbo.`,
+  `Companies: Role #${roleNumber} still open. Top candidate ghosted after round 6.`,
+  `Companies: Role #${roleNumber} — leadership "will circle back next quarter."`,
 ];
 
 const CANCELLED_MESSAGES = (roleNumber: number) => [
-  `Employer: Role #${roleNumber} pulled. Budget reallocated to more AI tools.`,
-  `Employer: Role #${roleNumber} cancelled. Headcount freeze. Listing still live.`,
-  `Employer: Role #${roleNumber} removed. Internal transfer filled it weeks ago.`,
+  `Companies: Role #${roleNumber} pulled. Budget reallocated to more AI tools.`,
+  `Companies: Role #${roleNumber} cancelled. Headcount freeze. Listing still live.`,
+  `Companies: Role #${roleNumber} removed. Internal transfer filled it weeks ago.`,
 ];
 
 export function scheduleRolePost(
@@ -63,7 +64,7 @@ export function resolvePostedRole(
   const employer = { ...state.employer };
   let employerDespair = state.employerDespair;
 
-  if (roll < 0.12)
+  if (roll < economyConfig.rolePostFillChance)
   {
     employer.positionsFilled += 1;
     employer.openRoles = Math.max(0, employer.openRoles - 1);

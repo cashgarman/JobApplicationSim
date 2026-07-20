@@ -21,6 +21,7 @@ export interface SeekerState {
 export interface EmployerState {
   aiRecruitmentSpend: number;
   positionsFilled: number;
+  rolesPosted: number;
   revenue: number;
   openRoles: number;
   debt: number;
@@ -128,6 +129,13 @@ export type FloatTextTone = 'bad' | 'hope' | 'good';
 export type FloatTextColumn = 'seeker' | 'ai' | 'employer';
 
 export type FloatTextPhase = 'travel' | 'linger';
+
+export interface DireFlavorLogEntry
+{
+  id: string;
+  text: string;
+  createdAt: number;
+}
 
 export interface FloatText {
   id: string;

@@ -15,7 +15,7 @@ import {
   getSavingsDrainPerSec,
   rollApplicationOutcome,
   getScaledEmployerDespairDelta,
-  getScaledSeekerDespairDelta,
+  getSeekerClickDespairDelta,
 } from './formulas';
 
 let eventCounter = 0;
@@ -58,6 +58,7 @@ export function createInitialState(): GameState
     employer: {
       aiRecruitmentSpend: 0,
       positionsFilled: 0,
+      rolesPosted: 0,
       revenue: INITIAL_REVENUE,
       openRoles: 0,
       debt: 0,
@@ -76,7 +77,7 @@ function applyOutcome(state: GameState, result: OutcomeResult): GameState
   const seeker = { ...state.seeker };
   const employer = { ...state.employer };
   let seekerDespair = clampDespair(
-    state.seekerDespair + getScaledSeekerDespairDelta(state, result.seekerDespairGain),
+    state.seekerDespair + getSeekerClickDespairDelta(state),
   );
   let employerDespair = clampDespair(
     state.employerDespair + getScaledEmployerDespairDelta(state, result.employerDespairGain),
@@ -222,7 +223,7 @@ export function applyDebtTick(state: GameState): {
   if (employerDebt.interestCharged > 0 && employerDebt.payment < employerDebt.interestCharged)
   {
     events.push(createFeedEvent(
-      `Employer: Missed $${Math.ceil(employerDebt.interestCharged)} interest payment. Debt: $${Math.ceil(employerDebt.debt)}.`,
+      `Companies: Missed $${Math.ceil(employerDebt.interestCharged)} interest payment. Debt: $${Math.ceil(employerDebt.debt)}.`,
       'employer',
     ));
   }
@@ -269,15 +270,15 @@ function createDrainEvents(before: GameState, after: GameState): FeedEvent[]
 
   if (prevRevenue > 0 && nextRevenue <= 0)
   {
-    events.push(createFeedEvent('Employer: Revenue hit zero. Open roles remain.', 'employer'));
+    events.push(createFeedEvent('Companies: Revenue hit zero. Open roles remain.', 'employer'));
   }
   else if (prevRevenue >= 5000 && nextRevenue < 5000)
   {
-    events.push(createFeedEvent('Employer: Revenue fell below $5,000.', 'employer'));
+    events.push(createFeedEvent('Companies: Revenue fell below $5,000.', 'employer'));
   }
   else if (prevRevenue >= 10000 && nextRevenue < 10000)
   {
-    events.push(createFeedEvent('Employer: Burn rate is winning.', 'employer'));
+    events.push(createFeedEvent('Companies: Burn rate is winning.', 'employer'));
   }
 
   return events;

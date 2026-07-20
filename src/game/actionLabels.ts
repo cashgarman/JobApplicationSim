@@ -36,3 +36,14 @@ export function getLoanOverlapProgress(despair: number): number
   const clamped = Math.max(0, Math.min(100, despair));
   return Math.max(0, (clamped - 75) / 25);
 }
+
+export function getLoanBlockOpacity(despair: number): number
+{
+  const overlapProgress = getLoanOverlapProgress(despair);
+  if (overlapProgress <= 0)
+  {
+    return 0;
+  }
+
+  return Math.min(1, Math.pow(overlapProgress, 0.35));
+}

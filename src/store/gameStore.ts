@@ -8,7 +8,7 @@ import {
   pickRandom,
 } from '../game/constants';
 import { getGeneratorById, getUpgradeById } from '../game/upgrades';
-import { getUpgradeCost, checkGameOver, clampDespair, getLoanPrincipal, getScaledEmployerDespairDelta } from '../game/formulas';
+import { getUpgradeCost, checkGameOver, clampDespair, getLoanPrincipal, getEmployerClickDespairDelta } from '../game/formulas';
 import { createFeedEvent, createInitialState, processApplication, tickGame } from '../game/tick';
 import { processPendingRolePosts, scheduleRolePost } from '../game/rolePost';
 import type { PendingRolePost } from '../game/rolePost';
@@ -46,6 +46,20 @@ function addFeedEvents(existing: FeedEvent[], newEvents: FeedEvent[]): FeedEvent
   return [...newEvents, ...existing].slice(0, MAX_FEED_EVENTS);
 }
 
+function clearPlaythroughLogs(): void
+{
+  useAnimationStore.getState().clearAll();
+}
+
+function clearedLogState()
+{
+  clearPlaythroughLogs();
+  return {
+    feedEvents: [] as FeedEvent[],
+    pendingRolePosts: [] as PendingRolePost[],
+  };
+}
+
 export const useGameStore = create<GameStore>((set, get) => ({
   state: getInitialState(),
   feedEvents: [],
@@ -56,17 +70,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
   {
     set((store) =>
     {
-      const shouldResetDespair =
+      const isNewPlaythrough =
         store.state.phase === 'start' || store.state.phase === 'gameOver';
       const state = {
         ...store.state,
         phase: 'playing' as const,
-        ...(shouldResetDespair
+        ...(isNewPlaythrough
           ? { seekerDespair: 0, employerDespair: 0, gameOverCause: undefined }
           : {}),
       };
       persist(state);
-      return { state };
+
+      if (!isNewPlaythrough)
+      {
+        return { state };
+      }
+
+      return {
+        state,
+        ...clearedLogState(),
+        sessionId: store.sessionId + 1,
+      };
     });
   },
 
@@ -118,21 +142,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     const openRoles = store.state.employer.openRoles + 1;
+    const rolesPosted = store.state.employer.rolesPosted + 1;
     const applicantCount = Math.floor(200 + Math.random() * 600);
     const state = checkGameOver({
       ...store.state,
       employer: {
         ...store.state.employer,
         openRoles,
+        rolesPosted,
         revenue: store.state.employer.revenue + 5,
       },
       employerDespair: clampDespair(
-        store.state.employerDespair + getScaledEmployerDespairDelta(store.state, 1.5),
+        store.state.employerDespair + getEmployerClickDespairDelta(store.state),
       ),
     });
     const feedEvents = addFeedEvents(store.feedEvents, [
       createFeedEvent(
-        `Employer: Posted role #${openRoles}. AI screening ${applicantCount} applicants.`,
+        `Companies: Posted role #${openRoles}. AI screening ${applicantCount} applicants.`,
         'employer',
       ),
     ]);
@@ -140,7 +166,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       ...store.pendingRolePosts,
       scheduleRolePost(openRoles, applicantCount),
     ];
-    useAnimationStore.setState({ employerDismayPulse: Date.now() });
+    useAnimationStore.getState().spawnRolePosted();
     persist(state);
     set({ state, feedEvents, pendingRolePosts });
   },
@@ -353,6 +379,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const resolvedRoleEvents = roleResolution.events.map((event) =>
       createFeedEvent(event.message, event.type),
     );
+    for (const event of roleResolution.events)
+    {
+      if (event.type === 'rejection' || event.type === 'aiInterview')
+      {
+        useAnimationStore.getState().appendEmployerDireFlavor();
+      }
+    }
     const allNewEvents = [...events, ...resolvedRoleEvents];
     if (allNewEvents.length > 0)
     {
@@ -391,26 +424,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   resetGame: () =>
   {
-    useAnimationStore.getState().clearAll();
     const state = createInitialState();
     persist(state);
     set((store) => ({
       state,
-      feedEvents: [],
-      pendingRolePosts: [],
+      ...clearedLogState(),
       sessionId: store.sessionId + 1,
     }));
   },
 
   restartGame: () =>
   {
-    useAnimationStore.getState().clearAll();
     const state = createInitialState();
     persist(state);
     set((store) => ({
       state,
-      feedEvents: [],
-      pendingRolePosts: [],
+      ...clearedLogState(),
       sessionId: store.sessionId + 1,
     }));
 

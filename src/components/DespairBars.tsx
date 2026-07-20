@@ -100,14 +100,14 @@ export function DespairBars()
       </div>
       <div className="flex items-end gap-2">
         <DespairBar
-          label="Job Seeker"
+          label="Job Seakers"
           value={seekerDespair}
           fillClass="bg-gradient-to-r from-purple-900 to-corp-red"
           fillDirection="ltr"
           alignLabel="left"
         />
         <DespairBar
-          label="Employer"
+          label="Companies"
           value={employerDespair}
           fillClass="bg-gradient-to-l from-orange-900 to-corp-amber"
           fillDirection="rtl"

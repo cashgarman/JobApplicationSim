@@ -94,7 +94,7 @@ export function AILayerColumn()
         <div className="flex shrink-0 flex-col items-center justify-center gap-1.5 border-y border-corp-border/50 py-3 text-center">
           <i className="fa-solid fa-scale-unbalanced text-2xl text-corp-amber opacity-90 lg:text-3xl" />
           <p className="text-xs text-corp-muted lg:text-sm">
-            Seekers apply. Employers post. Agencies profit. Humanity optional.
+            Seekers apply. Companies post. Agencies profit. Humanity optional.
           </p>
         </div>
 

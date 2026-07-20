@@ -1,5 +1,6 @@
 import type { GameOverCause } from '../game/types';
 import { useGameStore } from '../store/gameStore';
+import { ScreenGlitchText } from './ScreenGlitchText';
 
 function getGameOverCopy(cause: GameOverCause | undefined): { title: string; body: string }
 {
@@ -13,7 +14,7 @@ function getGameOverCopy(cause: GameOverCause | undefined): { title: string; bod
       };
     case 'employer':
       return {
-        title: 'Hiring Collapse',
+        title: 'Companies Collapse',
         body:
           'Every role remains open. The AI vendors thank you for your patronage. Recruitment agencies have never been more profitable.',
       };
@@ -21,7 +22,7 @@ function getGameOverCopy(cause: GameOverCause | undefined): { title: string; bod
       return {
         title: 'Mutual Destruction',
         body:
-          'The job seeker broke first. The employer broke second. The agencies billed both sides the entire time.',
+          'The job seeker broke first. The companies broke second. The agencies billed both sides the entire time.',
       };
     default:
       return {
@@ -39,21 +40,27 @@ export function GameOverScreen()
 
   return (
     <div className="flex h-screen flex-col items-center justify-center overflow-hidden bg-corp-bg px-4 text-center">
-      <p className="font-pixel mb-3 text-xl uppercase tracking-wider text-corp-red">
-        Game Over
-      </p>
-      <h1 className="font-pixel mb-4 text-lg leading-relaxed text-corp-text sm:text-xl">
-        {title}
-      </h1>
-      <p className="mb-8 max-w-lg text-sm text-corp-muted italic">
-        {body}
-      </p>
+      <ScreenGlitchText
+        as="p"
+        text="Game Over"
+        className="font-pixel mb-3 text-xl uppercase tracking-wider text-corp-red"
+      />
+      <ScreenGlitchText
+        as="h1"
+        text={title}
+        className="font-pixel mb-4 text-lg leading-relaxed text-corp-text sm:text-xl"
+      />
+      <ScreenGlitchText
+        as="p"
+        text={body}
+        className="mb-8 max-w-lg text-sm text-corp-muted italic"
+      />
       <button
         type="button"
         onClick={restartGame}
         className="btn-green font-pixel rounded px-6 py-4 text-sm uppercase"
       >
-        Try Again? But Why bother...
+        <ScreenGlitchText text="Try Again? But Why bother..." />
       </button>
     </div>
   );

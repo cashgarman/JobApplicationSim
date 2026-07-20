@@ -2,10 +2,18 @@ import { useEffect, useState, type CSSProperties } from 'react';
 
 const CORRUPT_GLYPHS = '█▓@#$%&*?01';
 
+export interface GlitchTextOptions
+{
+  tickIntervalMs?: number;
+  corruptBudgetMultiplier?: number;
+  minCorruptBudget?: number;
+}
+
 interface GlitchTextProps
 {
   text: string;
   intensity: number;
+  options?: GlitchTextOptions;
 }
 
 interface CorruptChar
@@ -14,7 +22,7 @@ interface CorruptChar
   until: number;
 }
 
-export function GlitchText({ text, intensity }: GlitchTextProps)
+export function GlitchText({ text, intensity, options }: GlitchTextProps)
 {
   const [corruptMap, setCorruptMap] = useState<Map<number, CorruptChar>>(new Map());
 
@@ -25,6 +33,10 @@ export function GlitchText({ text, intensity }: GlitchTextProps)
       setCorruptMap(new Map());
       return;
     }
+
+    const corruptBudgetMultiplier = options?.corruptBudgetMultiplier ?? 0.12;
+    const minCorruptBudget = options?.minCorruptBudget ?? 1;
+    const tickIntervalMs = options?.tickIntervalMs ?? Math.max(45, 160 - intensity * 110);
 
     const tick = () =>
     {
@@ -41,7 +53,10 @@ export function GlitchText({ text, intensity }: GlitchTextProps)
           }
         }
 
-        const corruptBudget = Math.max(1, Math.ceil(intensity * text.length * 0.12));
+        const corruptBudget = Math.max(
+          minCorruptBudget,
+          Math.ceil(intensity * text.length * corruptBudgetMultiplier),
+        );
 
         for (let attempt = 0; attempt < corruptBudget; attempt++)
         {
@@ -64,11 +79,10 @@ export function GlitchText({ text, intensity }: GlitchTextProps)
     };
 
     tick();
-    const intervalMs = Math.max(45, 160 - intensity * 110);
-    const interval = setInterval(tick, intervalMs);
+    const interval = setInterval(tick, tickIntervalMs);
 
     return () => clearInterval(interval);
-  }, [intensity, text]);
+  }, [intensity, options, text]);
 
   if (intensity <= 0)
   {
