@@ -39,7 +39,7 @@ function getSeekerLines(seeker: {
     seeker.debt > 0
       ? `Debt: ${Math.floor(seeker.debt).toLocaleString()}. The bank believes in you. Incorrectly.`
       : 'Loans are available when optimism runs out.',
-    'Recruiters ghost. Algorithms judge. Agencies invoice.',
+    'Recruiters ghost. Algorithms judge. AI Recruitment invoices.',
   ];
 }
 
@@ -70,7 +70,7 @@ function getEmployerLines(employer: {
     employer.debt > 0
       ? `Corporate debt: ${Math.floor(employer.debt).toLocaleString()}. Growth at any cost.`
       : 'Bridge financing available. The bridge is on fire.',
-    'Every rejected candidate still cost you money. The agency still got paid.',
+    'Every rejected candidate still cost you money. AI Recruitment still got paid.',
   ];
 }
 
@@ -104,11 +104,10 @@ export function DirePanel({ side }: DirePanelProps)
   }, [lastFlavorEntryId]);
 
   const accentClass = side === 'seeker' ? 'border-corp-red/40' : 'border-corp-amber/40';
-  const titleClass = side === 'seeker' ? 'text-corp-red' : 'text-corp-amber';
 
   return (
     <div
-      className={`relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded border ${accentClass} bg-corp-bg/80 p-3`}
+      className={`relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded border ${accentClass} bg-corp-bg/80 p-2`}
     >
       {glitchIntensity > 0 && (
         <DespairGlitchOverlay side={side} intensity={glitchIntensity} />
@@ -121,20 +120,14 @@ export function DirePanel({ side }: DirePanelProps)
             : undefined
         }
       >
-        <h3 className={`font-pixel mb-2 shrink-0 text-[10px] ${titleClass} lg:text-xs`}>
-          <GlitchText
-            text={side === 'seeker' ? 'The Seeker\'s Reality' : 'The Companies\' Trap'}
-            intensity={glitchIntensity}
-          />
-        </h3>
         <ul
           ref={logRef}
-          className="dire-panel-list min-h-0 flex-1 text-xs leading-relaxed text-corp-muted lg:text-sm"
+          className={`dire-panel-list dire-panel-scroll dire-panel-scroll--${side} min-h-0 flex-1 text-xs text-corp-muted`}
         >
           {lines.map((line) => (
             <li
               key={line}
-              className="dire-panel-line border-b border-corp-border/40 last:border-0"
+              className="dire-panel-line"
             >
               <GlitchText text={line} intensity={glitchIntensity} />
             </li>
@@ -142,7 +135,7 @@ export function DirePanel({ side }: DirePanelProps)
           {flavorLog.map((entry) => (
             <li
               key={entry.id}
-              className={`dire-panel-line dire-panel-flavor border-b border-corp-border/40 last:border-0 ${
+              className={`dire-panel-line dire-panel-flavor ${
                 side === 'seeker' ? 'text-corp-red' : 'text-corp-amber'
               }`}
             >

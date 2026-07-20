@@ -1,4 +1,5 @@
 import { formatCurrency, formatNumber } from '../game/formulas';
+import { useValueChangeFlash } from '../hooks/useValueChangeFlash';
 import { useGameStore } from '../store/gameStore';
 
 interface StatRowProps
@@ -6,9 +7,11 @@ interface StatRowProps
   label: string;
   value: string;
   highlight?: 'red' | 'amber' | 'green';
+  featured?: boolean;
+  dropFlash?: boolean;
 }
 
-function StatRow({ label, value, highlight }: StatRowProps)
+function StatRow({ label, value, highlight, featured, dropFlash }: StatRowProps)
 {
   const colorClass =
     highlight === 'red'
@@ -20,7 +23,9 @@ function StatRow({ label, value, highlight }: StatRowProps)
           : 'text-corp-text';
 
   return (
-    <div className="flex justify-between py-1 text-xs lg:text-sm">
+    <div
+      className={`game-stat-row${featured ? ' game-stat-row--featured' : ''}${dropFlash ? ' stat-value-drop-flash' : ''}`}
+    >
       <span className="text-corp-muted">{label}</span>
       <span className={`stat-value font-semibold ${colorClass}`}>{value}</span>
     </div>
@@ -30,13 +35,16 @@ function StatRow({ label, value, highlight }: StatRowProps)
 export function EmployerStats()
 {
   const employer = useGameStore((s) => s.state.employer);
+  const aiSpendFlash = useValueChangeFlash(employer.aiRecruitmentSpend, 'rise');
 
   return (
-    <div className="side-column-stats h-full rounded border border-corp-green/50 bg-corp-panel p-3">
+    <div className="side-column-stats h-full rounded border border-corp-green/50 bg-corp-panel p-2">
       <StatRow
         label="AI Money Burned"
         value={formatCurrency(employer.aiRecruitmentSpend)}
         highlight="red"
+        featured
+        dropFlash={aiSpendFlash}
       />
       <StatRow
         label="Roles Actually Filled"

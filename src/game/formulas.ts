@@ -423,9 +423,12 @@ export function getAgencyStats(state: GameState): AgencyStats
   const subscriptions = getActiveSubscriptionCount(state);
   const subscriptionRevenue = subscriptions * economyConfig.subscriptionRevenuePerSale;
   const seekerSpend = Math.max(0, INITIAL_SAVINGS - seeker.savings);
-  const totalBilled = subscriptionRevenue + employer.aiRecruitmentSpend + seekerSpend * 0.4;
-  const agencyProfit = totalBilled * 0.88;
+  const totalBilled = subscriptionRevenue
+    + employer.aiRecruitmentSpend
+    + seekerSpend * economyConfig.agencySeekerSpendShare;
+  const agencyProfit = totalBilled * economyConfig.agencyProfitMargin;
   const placements = employer.positionsFilled;
+  const profitMargin = Math.round(economyConfig.agencyProfitMargin * 100);
 
   return {
     totalBilled,
@@ -435,7 +438,7 @@ export function getAgencyStats(state: GameState): AgencyStats
     costPerHire: placements > 0 ? formatCurrency(totalBilled / placements) : '∞',
     activeSubscriptions: subscriptions,
     humanityBlocked: seeker.rejections + seeker.aiInterviews,
-    profitMargin: 88,
+    profitMargin,
   };
 }
 

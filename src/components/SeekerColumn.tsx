@@ -18,22 +18,25 @@ export function SeekerColumn()
 
   return (
     <div
-      className={`column-panel seeker-dismal relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded border border-corp-border bg-corp-panel p-2 lg:p-3 ${
+      className={`column-panel column-panel--seeker seeker-dismal relative flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded border border-corp-green/30 p-2 lg:p-2.5 ${
         dismayFlash ? 'seeker-dismay-flash' : ''
       }`}
     >
-      <div className="pointer-events-none absolute inset-0 rounded bg-green-500/30" />
       <div className="seeker-dismal-vignette pointer-events-none absolute inset-0" />
       <div className="relative z-10 flex h-full min-h-0 flex-col">
-        <div className="side-column-header shrink-0 text-center">
-          <i className="fa-solid fa-user-tie seeker-droop mb-1 text-2xl text-corp-text lg:text-3xl" />
-          <h2 className="font-pixel text-xs text-corp-green lg:text-sm">Job Seekers</h2>
-          <p className="seeker-sigh text-sm text-corp-red lg:text-base">qualified, rejected, billed</p>
+        <div className="column-header side-column-header shrink-0">
+          <div className="column-header__icon">
+            <i className="fa-solid fa-user-tie seeker-droop text-xl text-corp-text lg:text-2xl" />
+          </div>
+          <div className="column-header__text">
+            <h2 className="column-header__title font-pixel text-corp-green">Job Seekers</h2>
+            <p className="seeker-sigh text-xs leading-tight text-corp-red lg:text-sm">qualified, rejected, billed</p>
+          </div>
         </div>
-        <div className="side-column-stats mt-2 shrink-0">
+        <div className="side-column-stats mt-1.5 shrink-0">
           <SeekerStats />
         </div>
-        <div className="side-column-actions mt-2 shrink-0 text-center">
+        <div className="side-column-actions mt-1.5 shrink-0 text-center">
           <DespairActionButton
             side="seeker"
             despair={state.seekerDespair}
@@ -52,7 +55,7 @@ export function SeekerColumn()
             onTakeLoan={takeSeekerLoan}
           />
         </div>
-        <div className="mt-2 flex min-h-0 flex-1 flex-col">
+        <div className="mt-1.5 flex min-h-0 flex-1 flex-col">
           <DirePanel side="seeker" />
         </div>
       </div>

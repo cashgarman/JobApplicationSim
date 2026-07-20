@@ -16,13 +16,13 @@ function getGameOverCopy(cause: GameOverCause | undefined): { title: string; bod
       return {
         title: 'Companies Collapse',
         body:
-          'Every role remains open. The AI vendors thank you for your patronage. Recruitment agencies have never been more profitable.',
+          'Every role remains open. The AI vendors thank you for your patronage. AI Recruitment has never been more profitable.',
       };
     case 'both':
       return {
         title: 'Mutual Destruction',
         body:
-          'The job seeker broke first. The companies broke second. The agencies billed both sides the entire time.',
+          'The job seeker broke first. The companies broke second. AI Recruitment billed both sides the entire time.',
       };
     default:
       return {

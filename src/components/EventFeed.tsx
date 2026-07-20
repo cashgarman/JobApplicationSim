@@ -42,16 +42,16 @@ export function EventFeed({ compact = false }: EventFeedProps)
   return (
     <div className="relative flex h-full flex-col overflow-hidden rounded border border-corp-border bg-corp-bg">
       {compact && <BinaryRainBackground />}
-      <h3 className="font-pixel relative z-10 shrink-0 border-b border-corp-border bg-corp-bg/50 px-3 py-2 text-[10px] text-corp-muted backdrop-blur-[1px] lg:text-xs">
+      <h3 className="font-pixel relative z-10 shrink-0 border-b border-corp-border bg-corp-bg/50 px-2 py-1.5 text-xs text-corp-muted backdrop-blur-[1px]">
         {compact ? 'System Log' : 'Event Feed'}
       </h3>
       <div
-        className={`relative z-10 min-h-0 flex-1 overflow-hidden px-3 backdrop-blur-[0.5px] ${
-          compact ? 'flex flex-col bg-corp-bg/55 py-2' : 'bg-corp-bg/30 py-2'
+        className={`relative z-10 min-h-0 flex-1 overflow-hidden px-2 backdrop-blur-[0.5px] ${
+          compact ? 'flex flex-col bg-corp-bg/55 py-1' : 'bg-corp-bg/30 py-1.5'
         }`}
       >
         {visibleEvents.length === 0 ? (
-          <p className="text-xs text-corp-muted italic lg:text-sm">
+          <p className="text-xs italic text-corp-muted">
             Awaiting applications to shred...
           </p>
         ) : compact ? (
@@ -59,7 +59,7 @@ export function EventFeed({ compact = false }: EventFeedProps)
             {visibleEvents.map((event) => (
               <p
                 key={event.id}
-                className={`rounded-sm border-b border-corp-border/40 bg-corp-bg/35 py-1 text-xs leading-snug break-words whitespace-normal last:border-0 lg:text-sm ${COMPACT_LOG_COLORS[event.type] ?? 'text-corp-text'}`}
+                className={`rounded-sm border-b border-corp-border/40 bg-corp-bg/35 py-0.5 text-xs leading-tight break-words whitespace-normal last:border-0 ${COMPACT_LOG_COLORS[event.type] ?? 'text-corp-text'}`}
               >
                 {event.message}
               </p>

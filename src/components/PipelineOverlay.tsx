@@ -1,5 +1,7 @@
-import type { FloatTextColumn, FloatTextTone } from '../game/types';
+import type { FloatTextColumn, FloatTextTone, PipelineIcon } from '../game/types';
+import { APPLICATION_ENVELOPE_TRAVEL_MS } from '../game/applicationProcess';
 import {
+  getAnchoredFlyStyle,
   getFloatLingerStyle,
   getFloatPathAnimationClass,
   getIconClass,
@@ -34,7 +36,7 @@ function getFloatTravelClass(text: {
   path: Parameters<typeof getFloatPathAnimationClass>[0];
 }): string
 {
-  if (text.phase === 'linger' && text.path === 'aiToSeeker')
+  if (text.phase === 'linger' && (text.path === 'aiToSeeker' || text.path === 'processorToSeeker'))
   {
     return 'float-text-linger float-text-linger--seeker';
   }
@@ -44,7 +46,22 @@ function getFloatTravelClass(text: {
     return 'float-text-linger float-text-linger--employer';
   }
 
+  if (text.phase === 'linger' && text.path === 'roleProcessorToEmployer')
+  {
+    return 'float-text-linger float-text-linger--employer';
+  }
+
   return getFloatPathAnimationClass(text.path);
+}
+
+function isInboundProcessorInFlight(icon: PipelineIcon): boolean
+{
+  if (icon.path !== 'seekerToProcessor' && icon.path !== 'employerToRoleProcessor')
+  {
+    return true;
+  }
+
+  return Date.now() - icon.createdAt < APPLICATION_ENVELOPE_TRAVEL_MS;
 }
 
 export function PipelineOverlay()
@@ -69,16 +86,30 @@ export function PipelineOverlay()
           </span>
         </div>
       ))}
-      {pipelineIcons.map((icon) => (
-        <div
-          key={icon.id}
-          className={`pipeline-icon absolute ${getPathAnimationClass(icon.path)}`}
-          style={getPipelineIconStyle(icon)}
-          title={icon.message}
-        >
-          <i className={`text-2xl ${getIconClass(icon.kind)}`} />
-        </div>
-      ))}
+      {pipelineIcons.filter(isInboundProcessorInFlight).map((icon) =>
+      {
+        const hasAnchoredFly = icon.flyFrom != null && icon.flyTo != null;
+        const arriveFade = icon.path === 'processorToSeeker' || icon.path === 'roleProcessorToEmployer';
+
+        return (
+          <div
+            key={icon.id}
+            className={`pipeline-icon absolute ${
+              hasAnchoredFly
+                ? `pipeline-fly-anchored${arriveFade ? ' pipeline-fly-anchored--arrive' : ''}`
+                : getPathAnimationClass(icon.path, {
+                    smooth: icon.kind === 'application',
+                  })
+            }`}
+            style={hasAnchoredFly ? getAnchoredFlyStyle(icon) : getPipelineIconStyle(icon)}
+            title={icon.message}
+          >
+            <i
+              className={`${icon.kind === 'application' ? 'text-base' : 'text-2xl'} ${getIconClass(icon.kind, icon.envelopeTone)}`}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

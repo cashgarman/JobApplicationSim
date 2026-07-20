@@ -2,7 +2,7 @@ import { useMemo, type CSSProperties } from 'react';
 
 const COLUMN_COUNT = 8;
 const CHARS_PER_COLUMN = 18;
-const GLYPHS = '01█▓@#$%&*?';
+const GLYPHS = '01@#$%&*?';
 
 function buildCorruptColumn(seed: number): string
 {

@@ -36,7 +36,7 @@ export function LoanButton({ side, loansTaken, despair, onTakeLoan }: LoanButton
       <button
         type="button"
         onClick={onTakeLoan}
-        className={`loan-button font-pixel w-full rounded border ${despairCritical ? 'loan-button-critical' : ''}`}
+        className={`btn-loan loan-button side-column-primary-btn font-pixel w-full rounded ${despairCritical ? 'loan-button-critical' : ''}`}
       >
         <span
           className={glitchIntensity > 0 ? 'despair-glitch-text inline-flex justify-center' : 'inline-flex justify-center'}
@@ -49,7 +49,7 @@ export function LoanButton({ side, loansTaken, despair, onTakeLoan }: LoanButton
           <GlitchText text={label} intensity={glitchIntensity} />
         </span>
       </button>
-      <p className={`loan-button-caption mt-1 text-[10px] lg:text-xs ${despairCritical ? 'loan-button-critical-caption' : ''}`}>
+      <p className={`loan-button-caption mt-1 text-xs lg:text-sm ${despairCritical ? 'loan-button-critical-caption' : ''}`}>
         <span
           className={glitchIntensity > 0 ? 'despair-glitch-text inline-flex justify-center' : 'inline-flex justify-center'}
           style={

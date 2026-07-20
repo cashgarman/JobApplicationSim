@@ -104,10 +104,19 @@ export type PipelineIconKind = 'application' | 'rejection' | 'aiInterview' | 'hu
 
 export type PipelineIconPath =
   | 'seekerToAi'
+  | 'seekerToProcessor'
+  | 'processorToSeeker'
+  | 'employerToRoleProcessor'
+  | 'roleProcessorToEmployer'
   | 'aiToSeeker'
   | 'aiStays'
   | 'aiToEmployer'
   | 'employerToAi';
+
+export interface FlyPoint {
+  x: number;
+  y: number;
+}
 
 export interface PipelineIcon {
   id: string;
@@ -122,6 +131,10 @@ export interface PipelineIcon {
   rotationStart: number;
   rotationEnd: number;
   scalePeak: number;
+  envelopeTone?: FloatTextTone;
+  flyFrom?: FlyPoint;
+  flyTo?: FlyPoint;
+  queueItemId?: string;
 }
 
 export type FloatTextTone = 'bad' | 'hope' | 'good';

@@ -9,6 +9,7 @@ interface DespairActionButtonProps
   side: Perspective;
   despair: number;
   buried?: boolean;
+  disabled?: boolean;
   onClick: () => void;
 }
 
@@ -16,20 +17,23 @@ export function DespairActionButton({
   side,
   despair,
   buried = false,
+  disabled = false,
   onClick,
 }: DespairActionButtonProps)
 {
   const label = getActionLabel(side, despair);
   const glitchIntensity = useDespairGlitchIntensity(despair);
+  const isDisabled = buried || disabled;
 
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={buried}
-      aria-disabled={buried}
+      disabled={isDisabled}
+      aria-disabled={isDisabled}
+      data-pipeline-anchor={side === 'seeker' ? 'seeker-apply' : 'employer-post-role'}
       className={`btn-green side-column-primary-btn font-pixel rounded ${
-        buried ? 'side-column-primary-btn--buried' : ''
+        isDisabled ? 'side-column-primary-btn--buried' : ''
       }`}
     >
       <span

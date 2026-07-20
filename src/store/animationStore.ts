@@ -1,11 +1,14 @@
 import type { CSSProperties } from 'react';
 import { create } from 'zustand';
+import { APPLICATION_ENVELOPE_TRAVEL_MS } from '../game/applicationProcess';
+import { getApplicationFlyCoords, getRolePostFlyCoords } from '../game/pipelineAnchors';
 import { FLOAT_TEXT_POOLS, pickRandom } from '../game/constants';
 import type {
   FloatText,
   FloatTextColumn,
   FloatTextTone,
   DireFlavorLogEntry,
+  FeedEvent,
   OutcomeResult,
   PipelineIcon,
   PipelineIconKind,
@@ -15,7 +18,8 @@ import type {
 const MAX_ICONS = 12;
 const MAX_FLOAT_TEXTS = 24;
 const MAX_DIRE_FLAVOR_LOG = 16;
-const ICON_LIFETIME_MS = 2500;
+const ICON_LIFETIME_MS = 4000;
+const APPLICATION_ENVELOPE_TRAVEL_SEC = APPLICATION_ENVELOPE_TRAVEL_MS / 1000;
 
 let animCounter = 0;
 const pendingAnimationTimeouts = new Set<ReturnType<typeof setTimeout>>();
@@ -57,40 +61,54 @@ function randomBetween(min: number, max: number): number
   return min + Math.random() * (max - min);
 }
 
-function createIconVariation(kind: PipelineIconKind): Pick<
-  PipelineIcon,
-  'duration' | 'delay' | 'wobbleY' | 'wobbleX' | 'rotationStart' | 'rotationEnd' | 'scalePeak'
->
-{
-  const isRejection = kind === 'rejection';
-  const isHope = kind === 'humanInterview';
-
-  return {
-    duration: randomBetween(isRejection ? 0.9 : 0.7, isRejection ? 2.0 : 1.6),
-    delay: randomBetween(0, isRejection ? 120 : 200),
-    wobbleY: randomBetween(-35, 35),
-    wobbleX: randomBetween(-28, 28),
-    rotationStart: randomBetween(-35, 35),
-    rotationEnd: randomBetween(isRejection ? -90 : -25, isRejection ? 45 : 25),
-    scalePeak: randomBetween(isHope ? 1.1 : 0.75, isHope ? 1.5 : 1.25),
-  };
-}
-
-function makeIcon(
-  kind: PipelineIconKind,
+function makeApplicationEnvelope(
   path: PipelineIconPath,
   message: string,
   createdAt: number,
+  envelopeTone: FloatTextTone = 'hope',
+  queueItemId?: string,
 ): PipelineIcon
 {
-  return {
+  const icon: PipelineIcon = {
     id: nextId('icon'),
-    kind,
+    kind: 'application',
     path,
     message,
     createdAt,
-    ...createIconVariation(kind),
+    envelopeTone,
+    duration: APPLICATION_ENVELOPE_TRAVEL_SEC,
+    delay: 0,
+    wobbleY: 0,
+    wobbleX: 0,
+    rotationStart: 0,
+    rotationEnd: 0,
+    scalePeak: 1,
+    queueItemId,
   };
+
+  if (path === 'seekerToProcessor' || path === 'processorToSeeker')
+  {
+    const flyCoords = getApplicationFlyCoords(path);
+
+    if (flyCoords)
+    {
+      icon.flyFrom = flyCoords.flyFrom;
+      icon.flyTo = flyCoords.flyTo;
+    }
+  }
+
+  if (path === 'employerToRoleProcessor' || path === 'roleProcessorToEmployer')
+  {
+    const flyCoords = getRolePostFlyCoords(path);
+
+    if (flyCoords)
+    {
+      icon.flyFrom = flyCoords.flyFrom;
+      icon.flyTo = flyCoords.flyTo;
+    }
+  }
+
+  return icon;
 }
 
 interface AnimationStore
@@ -101,12 +119,24 @@ interface AnimationStore
   employerDireFlavorLog: DireFlavorLogEntry[];
   seekerDismayPulse: number;
   employerDismayPulse: number;
-  spawnFromOutcome: (result: OutcomeResult, options?: { includeApplicationIcon?: boolean }) => void;
-  spawnApplicationSent: () => void;
-  spawnRolePosted: () => void;
+  spawnFromOutcome: (result: OutcomeResult, options?: SpawnOutcomeOptions) => void;
+  spawnRolePostFromResolution: (
+    resolution: { message: string; type: FeedEvent['type'] },
+    options?: SpawnOutcomeOptions,
+  ) => void;
+  spawnApplicationSent: (queueItemId: string) => void;
+  spawnRolePosted: (queueItemId: string) => void;
+  clearInboundProcessorIcons: () => void;
+  clearInboundRoleProcessorIcons: () => void;
   appendEmployerDireFlavor: (text?: string) => void;
   pruneExpired: () => void;
   clearAll: () => void;
+}
+
+export interface SpawnOutcomeOptions
+{
+  onSeekerFeedbackDisplayed?: () => void;
+  onEmployerFeedbackDisplayed?: () => void;
 }
 
 function addIcon(icons: PipelineIcon[], icon: PipelineIcon): PipelineIcon[]
@@ -126,68 +156,6 @@ function getFloatLifetimeMs(text: FloatText): number
   return travelMs + lingerMs + 500;
 }
 
-function makeFloatForIcon(
-  icon: PipelineIcon,
-  column: FloatTextColumn,
-  tone: FloatTextTone,
-  text?: string,
-  options?: { lingerAtDestination?: boolean },
-): FloatText
-{
-  const float: FloatText = {
-    id: nextId('float'),
-    path: icon.path,
-    column,
-    text: text ?? pickFloat(column, tone),
-    tone,
-    phase: 'travel',
-    createdAt: icon.createdAt,
-    duration: icon.duration,
-    delay: icon.delay,
-    wobbleY: icon.wobbleY,
-    wobbleX: icon.wobbleX,
-    rotationStart: icon.rotationStart,
-    rotationEnd: icon.rotationEnd,
-    scalePeak: icon.scalePeak,
-  };
-
-  if (options?.lingerAtDestination)
-  {
-    float.lingerDuration = randomBetween(3, 4.8);
-    float.lingerDriftX = randomBetween(-30, 30);
-  }
-
-  return float;
-}
-
-function registerFloatLingerTransition(
-  float: FloatText,
-  getState: () => AnimationStore,
-  setState: (partial: Partial<AnimationStore> | ((state: AnimationStore) => Partial<AnimationStore>)) => void,
-): void
-{
-  if (!float.lingerDuration)
-  {
-    return;
-  }
-
-  const travelMs = float.delay + float.duration * 1000;
-  scheduleAnimationTimeout(() =>
-  {
-    const state = getState();
-    if (!state.floatTexts.some((entry) => entry.id === float.id))
-    {
-      return;
-    }
-
-    setState({
-      floatTexts: state.floatTexts.map((entry) =>
-        entry.id === float.id ? { ...entry, phase: 'linger' } : entry,
-      ),
-    });
-  }, travelMs);
-}
-
 function appendDireFlavorLog(logs: DireFlavorLogEntry[], text: string): DireFlavorLogEntry[]
 {
   return [
@@ -196,61 +164,108 @@ function appendDireFlavorLog(logs: DireFlavorLogEntry[], text: string): DireFlav
   ].slice(-MAX_DIRE_FLAVOR_LOG);
 }
 
-function addSeekerRejectionFloat(
-  texts: FloatText[],
-  icon: PipelineIcon,
-  lingerHandlers: {
-    getState: () => AnimationStore;
-    setState: (partial: Partial<AnimationStore> | ((state: AnimationStore) => Partial<AnimationStore>)) => void;
-  },
-  textOverride?: string,
-): { texts: FloatText[]; float: FloatText }
-{
-  const float = makeFloatForIcon(icon, 'seeker', 'bad', textOverride, { lingerAtDestination: true });
-  registerFloatLingerTransition(float, lingerHandlers.getState, lingerHandlers.setState);
-  return {
-    texts: addFloat(texts, float),
-    float,
-  };
-}
-
-function addEmployerHiringFloat(
-  texts: FloatText[],
-  icon: PipelineIcon,
-  lingerHandlers: {
-    getState: () => AnimationStore;
-    setState: (partial: Partial<AnimationStore> | ((state: AnimationStore) => Partial<AnimationStore>)) => void;
-  },
-  textOverride?: string,
-): { texts: FloatText[]; float: FloatText }
-{
-  const float = makeFloatForIcon(icon, 'employer', 'bad', textOverride, { lingerAtDestination: true });
-  registerFloatLingerTransition(float, lingerHandlers.getState, lingerHandlers.setState);
-  return {
-    texts: addFloat(texts, float),
-    float,
-  };
-}
-
-function addFloatForIcon(
-  texts: FloatText[],
-  icon: PipelineIcon,
-  column: FloatTextColumn,
+function makeSeekerArrivalFloat(
   tone: FloatTextTone,
   text?: string,
-  options?: { lingerAtDestination?: boolean },
-  lingerHandlers?: {
+): FloatText
+{
+  const float: FloatText = {
+    id: nextId('float'),
+    path: 'processorToSeeker',
+    column: 'seeker',
+    text: text ?? pickFloat('seeker', tone),
+    tone,
+    phase: 'linger',
+    createdAt: Date.now(),
+    duration: 0,
+    delay: 0,
+    wobbleY: 0,
+    wobbleX: 0,
+    rotationStart: 0,
+    rotationEnd: 0,
+    scalePeak: 1,
+    lingerDuration: randomBetween(3, 4.8),
+    lingerDriftX: randomBetween(-30, 30),
+  };
+
+  return float;
+}
+
+function makeEmployerArrivalFloat(
+  tone: FloatTextTone,
+  text?: string,
+): FloatText
+{
+  const float: FloatText = {
+    id: nextId('float'),
+    path: 'employerToAi',
+    column: 'employer',
+    text: text ?? pickFloat('employer', tone),
+    tone,
+    phase: 'linger',
+    createdAt: Date.now(),
+    duration: 0,
+    delay: 0,
+    wobbleY: 0,
+    wobbleX: 0,
+    rotationStart: 0,
+    rotationEnd: 0,
+    scalePeak: 1,
+    lingerDuration: randomBetween(3, 4.8),
+    lingerDriftX: randomBetween(-30, 30),
+  };
+
+  return float;
+}
+
+function scheduleSeekerArrivalFloat(
+  tone: FloatTextTone,
+  lingerHandlers: {
     getState: () => AnimationStore;
     setState: (partial: Partial<AnimationStore> | ((state: AnimationStore) => Partial<AnimationStore>)) => void;
   },
-): FloatText[]
+  textOverride?: string,
+  onDisplayed?: () => void,
+): { float: FloatText; travelMs: number }
 {
-  const float = makeFloatForIcon(icon, column, tone, text, options);
-  if (lingerHandlers)
+  const float = makeSeekerArrivalFloat(tone, textOverride);
+  const travelMs = APPLICATION_ENVELOPE_TRAVEL_MS;
+
+  scheduleAnimationTimeout(() =>
   {
-    registerFloatLingerTransition(float, lingerHandlers.getState, lingerHandlers.setState);
-  }
-  return addFloat(texts, float);
+    const state = lingerHandlers.getState();
+    lingerHandlers.setState({
+      floatTexts: addFloat(state.floatTexts, float),
+    });
+    onDisplayed?.();
+  }, travelMs);
+
+  return { float, travelMs };
+}
+
+function scheduleEmployerArrivalFloat(
+  tone: FloatTextTone,
+  lingerHandlers: {
+    getState: () => AnimationStore;
+    setState: (partial: Partial<AnimationStore> | ((state: AnimationStore) => Partial<AnimationStore>)) => void;
+  },
+  textOverride?: string,
+  onDisplayed?: () => void,
+): { float: FloatText; travelMs: number }
+{
+  const float = makeEmployerArrivalFloat(tone, textOverride);
+  const travelMs = APPLICATION_ENVELOPE_TRAVEL_MS;
+
+  scheduleAnimationTimeout(() =>
+  {
+    const state = lingerHandlers.getState();
+    lingerHandlers.setState({
+      floatTexts: addFloat(state.floatTexts, float),
+    });
+    onDisplayed?.();
+  }, travelMs);
+
+  return { float, travelMs };
 }
 
 export const useAnimationStore = create<AnimationStore>((set, get) => {
@@ -267,40 +282,88 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
   seekerDismayPulse: 0,
   employerDismayPulse: 0,
 
-  spawnApplicationSent: () =>
+  spawnApplicationSent: (queueItemId) =>
   {
     const now = Date.now();
-    const applicationIcon = makeIcon('application', 'seekerToAi', 'Application submitted', now);
+    const applicationIcon = makeApplicationEnvelope(
+      'seekerToProcessor',
+      'Application submitted',
+      now,
+      'hope',
+      queueItemId,
+    );
 
     set((store) => ({
       pipelineIcons: addIcon(store.pipelineIcons, applicationIcon),
-      floatTexts: addFloatForIcon(
-        store.floatTexts,
-        applicationIcon,
-        'seeker',
-        'hope',
-        'Sent!',
-        undefined,
-        lingerHandlers,
-      ),
     }));
   },
 
-  spawnRolePosted: () =>
+  spawnRolePosted: (queueItemId) =>
   {
     const now = Date.now();
-    const roleIcon = makeIcon('application', 'employerToAi', 'Role posted', now);
-    const hiringFloat = addEmployerHiringFloat(get().floatTexts, roleIcon, lingerHandlers);
+    const roleIcon = makeApplicationEnvelope(
+      'employerToRoleProcessor',
+      'Role posted',
+      now,
+      'hope',
+      queueItemId,
+    );
 
     set((store) => ({
       pipelineIcons: addIcon(store.pipelineIcons, roleIcon),
-      floatTexts: hiringFloat.texts,
-      employerDireFlavorLog: appendDireFlavorLog(
-        store.employerDireFlavorLog,
-        hiringFloat.float.text,
-      ),
       employerDismayPulse: now,
     }));
+  },
+
+  clearInboundProcessorIcons: () =>
+  {
+    set((store) => ({
+      pipelineIcons: store.pipelineIcons.filter((icon) => icon.path !== 'seekerToProcessor'),
+    }));
+  },
+
+  clearInboundRoleProcessorIcons: () =>
+  {
+    set((store) => ({
+      pipelineIcons: store.pipelineIcons.filter((icon) => icon.path !== 'employerToRoleProcessor'),
+    }));
+  },
+
+  spawnRolePostFromResolution: (resolution, options) =>
+  {
+    const now = Date.now();
+    const onEmployerFeedbackDisplayed = options?.onEmployerFeedbackDisplayed;
+    let icons = get().pipelineIcons;
+    let employerDireFlavorLog = get().employerDireFlavorLog;
+    const tone: FloatTextTone = resolution.type === 'humanInterview'
+      ? 'good'
+      : resolution.type === 'aiInterview'
+        ? 'hope'
+        : 'bad';
+    const returnIcon = makeApplicationEnvelope(
+      'roleProcessorToEmployer',
+      resolution.message,
+      now,
+      tone,
+    );
+    icons = addIcon(icons, returnIcon);
+    const employerFloat = scheduleEmployerArrivalFloat(
+      tone,
+      lingerHandlers,
+      undefined,
+      onEmployerFeedbackDisplayed,
+    );
+
+    if (resolution.type === 'rejection' || resolution.type === 'aiInterview')
+    {
+      employerDireFlavorLog = appendDireFlavorLog(employerDireFlavorLog, employerFloat.float.text);
+    }
+
+    set({
+      pipelineIcons: icons.slice(0, MAX_ICONS),
+      employerDireFlavorLog,
+      employerDismayPulse: now,
+    });
   },
 
   appendEmployerDireFlavor: (text?: string) =>
@@ -312,30 +375,27 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
     }));
   },
 
-  spawnFromOutcome: (result: OutcomeResult, options?: { includeApplicationIcon?: boolean }) =>
+  spawnFromOutcome: (result, options) =>
   {
-    const includeApplicationIcon = options?.includeApplicationIcon ?? true;
     const now = Date.now();
+    const onSeekerFeedbackDisplayed = options?.onSeekerFeedbackDisplayed;
     let icons = get().pipelineIcons;
-    let texts = get().floatTexts;
     let seekerDireFlavorLog = get().seekerDireFlavorLog;
     let seekerDismayPulse = get().seekerDismayPulse;
     let employerDismayPulse = get().employerDismayPulse;
-
-    if (includeApplicationIcon)
-    {
-      const applicationIcon = makeIcon('application', 'seekerToAi', result.message, now - 400);
-      icons = addIcon(icons, applicationIcon);
-    }
 
     switch (result.outcome)
     {
       case 'rejection':
       {
-        const rejectionIcon = makeIcon('rejection', 'aiToSeeker', result.message, now);
-        icons = addIcon(icons, rejectionIcon);
-        const rejectionFloat = addSeekerRejectionFloat(texts, rejectionIcon, lingerHandlers);
-        texts = rejectionFloat.texts;
+        const returnIcon = makeApplicationEnvelope('processorToSeeker', result.message, now, 'bad');
+        icons = addIcon(icons, returnIcon);
+        const rejectionFloat = scheduleSeekerArrivalFloat(
+          'bad',
+          lingerHandlers,
+          undefined,
+          onSeekerFeedbackDisplayed,
+        );
         seekerDireFlavorLog = appendDireFlavorLog(seekerDireFlavorLog, rejectionFloat.float.text);
         seekerDismayPulse = now;
         employerDismayPulse = now;
@@ -344,45 +404,50 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
 
       case 'aiInterview':
       {
-        const interviewIcon = makeIcon('aiInterview', 'aiStays', result.message, now);
-        icons = addIcon(icons, interviewIcon);
-        texts = addFloatForIcon(texts, interviewIcon, 'seeker', 'hope', 'Progress?!', undefined, lingerHandlers);
+        const returnIcon = makeApplicationEnvelope('processorToSeeker', result.message, now, 'hope');
+        icons = addIcon(icons, returnIcon);
+        scheduleSeekerArrivalFloat('hope', lingerHandlers, 'Progress?!', onSeekerFeedbackDisplayed);
         seekerDismayPulse = now;
         break;
       }
 
       case 'humanInterview':
       {
-        const interviewIcon = makeIcon('humanInterview', 'aiToEmployer', result.message, now);
+        const interviewIcon = makeApplicationEnvelope('aiToEmployer', result.message, now, 'good');
         icons = addIcon(icons, interviewIcon);
-        texts = addFloatForIcon(texts, interviewIcon, 'employer', 'good', 'Human detected?!', undefined, lingerHandlers);
+        scheduleEmployerArrivalFloat(
+          'good',
+          lingerHandlers,
+          'Human detected?!',
+          result.positionFilled ? onSeekerFeedbackDisplayed : undefined,
+        );
         if (!result.positionFilled)
         {
           scheduleAnimationTimeout(() =>
           {
-            const state = get();
-            const rejectionIcon = makeIcon(
-              'rejection',
-              'aiToSeeker',
+            const delayedNow = Date.now();
+            const rejectionIcon = makeApplicationEnvelope(
+              'processorToSeeker',
               'Rescheduled to AI screen',
-              Date.now(),
+              delayedNow,
+              'bad',
             );
-            const rejectionFloat = addSeekerRejectionFloat(
-              state.floatTexts,
-              rejectionIcon,
+            const rejectionFloat = scheduleSeekerArrivalFloat(
+              'bad',
               lingerHandlers,
+              undefined,
+              onSeekerFeedbackDisplayed,
             );
 
-            set({
+            set((state) => ({
               pipelineIcons: addIcon(state.pipelineIcons, rejectionIcon),
-              floatTexts: rejectionFloat.texts,
               seekerDireFlavorLog: appendDireFlavorLog(
                 state.seekerDireFlavorLog,
                 rejectionFloat.float.text,
               ),
-              seekerDismayPulse: Date.now(),
-              employerDismayPulse: Date.now(),
-            });
+              seekerDismayPulse: delayedNow,
+              employerDismayPulse: delayedNow,
+            }));
           }, 800);
         }
         break;
@@ -391,7 +456,6 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
 
     set({
       pipelineIcons: icons.slice(0, MAX_ICONS),
-      floatTexts: texts.slice(0, MAX_FLOAT_TEXTS),
       seekerDireFlavorLog,
       seekerDismayPulse,
       employerDismayPulse,
@@ -403,7 +467,10 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
     const now = Date.now();
     set((store) => ({
       pipelineIcons: store.pipelineIcons.filter(
-        (icon) => now - icon.createdAt < ICON_LIFETIME_MS,
+        (icon) =>
+          icon.path === 'seekerToProcessor'
+          || icon.path === 'employerToRoleProcessor'
+          || now - icon.createdAt < ICON_LIFETIME_MS,
       ),
       floatTexts: store.floatTexts.filter(
         (text) => now - text.createdAt < getFloatLifetimeMs(text),
@@ -426,12 +493,24 @@ export const useAnimationStore = create<AnimationStore>((set, get) => {
   };
 });
 
-export function getIconClass(kind: PipelineIconKind): string
+export function getIconClass(kind: PipelineIconKind, envelopeTone?: FloatTextTone): string
 {
   switch (kind)
   {
     case 'application':
-      return 'fa-solid fa-paper-plane text-corp-text';
+      if (envelopeTone === 'bad')
+      {
+        return 'fa-solid fa-envelope text-corp-red';
+      }
+      if (envelopeTone === 'good')
+      {
+        return 'fa-solid fa-envelope text-corp-green';
+      }
+      if (envelopeTone === 'hope')
+      {
+        return 'fa-solid fa-envelope text-corp-amber';
+      }
+      return 'fa-solid fa-envelope text-white';
     case 'rejection':
       return 'fa-solid fa-ban text-corp-red';
     case 'aiInterview':
@@ -441,12 +520,44 @@ export function getIconClass(kind: PipelineIconKind): string
   }
 }
 
-export function getPathAnimationClass(path: PipelineIconPath): string
+export function getPathAnimationClass(
+  path: PipelineIconPath,
+  options?: { smooth?: boolean },
+): string
 {
+  if (options?.smooth)
+  {
+    switch (path)
+    {
+      case 'seekerToAi':
+        return 'pipeline-seeker-to-ai-smooth';
+      case 'seekerToProcessor':
+        return 'pipeline-seeker-to-processor-smooth';
+      case 'processorToSeeker':
+        return 'pipeline-processor-to-seeker-smooth';
+      case 'aiToSeeker':
+        return 'pipeline-ai-to-seeker-smooth';
+      case 'aiToEmployer':
+        return 'pipeline-ai-to-employer-smooth';
+      case 'employerToAi':
+        return 'pipeline-employer-to-ai-smooth';
+      case 'employerToRoleProcessor':
+        return 'pipeline-employer-to-ai-smooth';
+      case 'roleProcessorToEmployer':
+        return 'pipeline-ai-to-employer-smooth';
+      default:
+        break;
+    }
+  }
+
   switch (path)
   {
     case 'seekerToAi':
       return 'pipeline-seeker-to-ai';
+    case 'seekerToProcessor':
+      return 'pipeline-seeker-to-processor';
+    case 'processorToSeeker':
+      return 'pipeline-processor-to-seeker';
     case 'aiToSeeker':
       return 'pipeline-ai-to-seeker';
     case 'aiStays':
@@ -455,7 +566,13 @@ export function getPathAnimationClass(path: PipelineIconPath): string
       return 'pipeline-ai-to-employer';
     case 'employerToAi':
       return 'pipeline-employer-to-ai';
+    case 'employerToRoleProcessor':
+      return 'pipeline-employer-to-ai';
+    case 'roleProcessorToEmployer':
+      return 'pipeline-ai-to-employer';
   }
+
+  return 'pipeline-seeker-to-ai';
 }
 
 export function getFloatPathAnimationClass(path: PipelineIconPath): string
@@ -463,16 +580,23 @@ export function getFloatPathAnimationClass(path: PipelineIconPath): string
   switch (path)
   {
     case 'seekerToAi':
+    case 'seekerToProcessor':
       return 'float-seeker-to-ai';
     case 'aiToSeeker':
+    case 'processorToSeeker':
       return 'float-ai-to-seeker';
     case 'aiStays':
       return 'float-ai-stays';
     case 'aiToEmployer':
       return 'float-ai-to-employer';
     case 'employerToAi':
+    case 'employerToRoleProcessor':
       return 'float-employer-to-ai';
+    case 'roleProcessorToEmployer':
+      return 'float-ai-to-employer';
   }
+
+  return 'float-seeker-to-ai';
 }
 
 export function getFloatLingerStyle(text: FloatText): CSSProperties
@@ -497,5 +621,21 @@ export function getPipelineIconStyle(icon: Pick<
     '--rs': `${icon.rotationStart}deg`,
     '--re': `${icon.rotationEnd}deg`,
     '--scale': `${icon.scalePeak}`,
+  } as CSSProperties;
+}
+
+export function getAnchoredFlyStyle(icon: PipelineIcon): CSSProperties
+{
+  if (!icon.flyFrom || !icon.flyTo)
+  {
+    return getPipelineIconStyle(icon);
+  }
+
+  return {
+    ...getPipelineIconStyle(icon),
+    left: icon.flyFrom.x,
+    top: icon.flyFrom.y,
+    '--fly-dx': `${icon.flyTo.x - icon.flyFrom.x}px`,
+    '--fly-dy': `${icon.flyTo.y - icon.flyFrom.y}px`,
   } as CSSProperties;
 }

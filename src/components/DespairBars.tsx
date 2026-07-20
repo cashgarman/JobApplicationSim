@@ -1,18 +1,18 @@
 import type { CSSProperties } from 'react';
+import { getScreenGlitchOptions } from '../config/screenGlitch';
 import { DESPAIR_MAX } from '../game/constants';
+import { useValueChangeFlash } from '../hooks/useValueChangeFlash';
 import { useGameStore } from '../store/gameStore';
+import { GlitchText } from './GlitchText';
+
 function DespairBar({
-  label,
   value,
   fillClass,
   fillDirection,
-  alignLabel,
 }: {
-  label: string;
   value: number;
   fillClass: string;
   fillDirection: 'ltr' | 'rtl';
-  alignLabel: 'left' | 'right';
 })
 {
   const percent = Math.min(100, (value / DESPAIR_MAX) * 100);
@@ -24,15 +24,6 @@ function DespairBar({
 
   return (
     <div className="min-w-0 flex-1">
-      <div
-        className={`mb-1 flex items-center ${
-          alignLabel === 'right' ? 'justify-end' : 'justify-start'
-        }`}
-      >
-        <span className="font-pixel truncate text-[9px] text-corp-muted lg:text-[10px]">
-          {label}
-        </span>
-      </div>
       <div
         className={`relative flex h-8 overflow-hidden rounded border border-corp-border bg-corp-bg lg:h-9 ${
           fillDirection === 'rtl' ? 'justify-end' : ''
@@ -71,27 +62,80 @@ function DespairBar({
   );
 }
 
+function DespairHeader({ intensity, flash }: { intensity: number; flash: boolean })
+{
+  return (
+    <div
+      className={`despair-header despair-glitch-text px-4 ${
+        flash ? 'despair-label-flash' : ''
+      }`}
+      style={{ '--glitch-intensity': intensity } as CSSProperties}
+      aria-hidden
+    >
+      <GlitchText
+        text="DESPAIR"
+        intensity={intensity}
+        options={getScreenGlitchOptions()}
+      />
+    </div>
+  );
+}
+
+const DESPAIR_HEADER_VISIBILITY_THRESHOLD = 30;
+
+function getDespairHeaderOpacity(seekerDespair: number, employerDespair: number): number
+{
+  const averagePercent = ((seekerDespair + employerDespair) / 2 / DESPAIR_MAX) * 100;
+
+  if (averagePercent < DESPAIR_HEADER_VISIBILITY_THRESHOLD)
+  {
+    return 0;
+  }
+
+  return Math.min(
+    1,
+    (averagePercent - DESPAIR_HEADER_VISIBILITY_THRESHOLD)
+      / (100 - DESPAIR_HEADER_VISIBILITY_THRESHOLD),
+  );
+}
+
 export function DespairBars()
 {
   const seekerDespair = useGameStore((s) => s.state.seekerDespair);
   const employerDespair = useGameStore((s) => s.state.employerDespair);
+  const maxDespair = Math.max(seekerDespair, employerDespair);
+  const headerOpacity = getDespairHeaderOpacity(seekerDespair, employerDespair);
+  const glitchIntensity = headerOpacity <= 0
+    ? 0
+    : Math.min(1, 0.25 + (maxDespair / DESPAIR_MAX) * 0.75);
+  const despairFlashing = useValueChangeFlash(maxDespair, 'rise');
 
   return (
     <div className="rounded border border-corp-border bg-corp-panel px-3 py-2.5">
+      <div className="mb-1 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <span className="despair-bar-label despair-bar-label--seeker column-header__title font-pixel truncate text-corp-green seeker-sigh">
+          Job Seekers
+        </span>
+        <div
+          className="transition-opacity duration-500"
+          style={{ opacity: headerOpacity }}
+        >
+          <DespairHeader intensity={glitchIntensity} flash={despairFlashing} />
+        </div>
+        <span className="despair-bar-label despair-bar-label--employer column-header__title font-pixel truncate text-right text-corp-green employer-bleed-text">
+          Companies
+        </span>
+      </div>
       <div className="flex items-end gap-2">
         <DespairBar
-          label="Job Seekers"
           value={seekerDespair}
           fillClass="bg-gradient-to-r from-purple-900 to-corp-red"
           fillDirection="ltr"
-          alignLabel="left"
         />
         <DespairBar
-          label="Companies"
           value={employerDespair}
           fillClass="bg-gradient-to-l from-orange-900 to-corp-amber"
           fillDirection="rtl"
-          alignLabel="right"
         />
       </div>
     </div>

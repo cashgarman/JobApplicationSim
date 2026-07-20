@@ -1,14 +1,17 @@
 import type { FeedEvent, GameState } from './types';
 import { economyConfig } from '../config/economy';
+import { AGENCY_ROLE_PROCESSING_MESSAGES, pickRandom } from './constants';
 import { checkGameOver, getScaledEmployerDespairDelta, clampDespair } from './formulas';
-import { pickRandom } from './constants';
-
 export interface PendingRolePost
 {
   id: string;
   roleNumber: number;
   applicantCount: number;
-  ticksRemaining: number;
+  source: 'click' | 'auto';
+  startedAt: number;
+  arrivedAt: number;
+  durationMs: number;
+  flavorMessage: string;
 }
 
 export interface RolePostResolution
@@ -45,13 +48,21 @@ const CANCELLED_MESSAGES = (roleNumber: number) => [
 export function scheduleRolePost(
   roleNumber: number,
   applicantCount: number,
+  source: PendingRolePost['source'] = 'click',
 ): PendingRolePost
 {
+  const minMs = economyConfig.rolePostProcessMinSec * 1000;
+  const maxMs = economyConfig.rolePostProcessMaxSec * 1000;
+
   return {
-    id: `role-${roleNumber}-${Date.now()}`,
+    id: `role-${roleNumber}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     roleNumber,
     applicantCount,
-    ticksRemaining: Math.floor(3 + Math.random() * 9),
+    source,
+    startedAt: 0,
+    arrivedAt: 0,
+    durationMs: minMs + Math.random() * (maxMs - minMs),
+    flavorMessage: pickRandom(AGENCY_ROLE_PROCESSING_MESSAGES),
   };
 }
 
@@ -62,27 +73,30 @@ export function resolvePostedRole(
 {
   const roll = Math.random();
   const employer = { ...state.employer };
-  let employerDespair = state.employerDespair;
 
   if (roll < economyConfig.rolePostFillChance)
   {
     employer.positionsFilled += 1;
     employer.openRoles = Math.max(0, employer.openRoles - 1);
     employer.revenue += 25;
-    employerDespair = clampDespair(employerDespair + getScaledEmployerDespairDelta(state, -1.2));
 
     return {
       message: pickRandom(FILLED_MESSAGES(pending.roleNumber)),
       type: 'humanInterview',
-      state: checkGameOver({ ...state, employer, employerDespair }),
+      state: checkGameOver({ ...state, employer }),
     };
   }
 
   if (roll < 0.45)
   {
     employer.openRoles = Math.max(0, employer.openRoles - 1);
-    employer.aiRecruitmentSpend += Math.floor(200 + Math.random() * 800);
-    employerDespair = clampDespair(employerDespair + getScaledEmployerDespairDelta(state, 0.6));
+    employer.aiRecruitmentSpend += Math.floor(
+      economyConfig.agencyRolePostAiSpendMin
+        + Math.random() * (economyConfig.agencyRolePostAiSpendMax - economyConfig.agencyRolePostAiSpendMin),
+    );
+    const employerDespair = clampDespair(
+      state.employerDespair + getScaledEmployerDespairDelta(state, economyConfig.employerDespairPerClick),
+    );
 
     return {
       message: pickRandom(NO_CANDIDATES_MESSAGES(pending.roleNumber, pending.applicantCount)),
@@ -93,52 +107,21 @@ export function resolvePostedRole(
 
   if (roll < 0.78)
   {
-    employerDespair = clampDespair(employerDespair + getScaledEmployerDespairDelta(state, 0.35));
-
     return {
       message: pickRandom(STALLED_MESSAGES(pending.roleNumber, pending.applicantCount)),
       type: 'aiInterview',
-      state: checkGameOver({ ...state, employer, employerDespair }),
+      state: checkGameOver({ ...state, employer }),
     };
   }
 
   employer.openRoles = Math.max(0, employer.openRoles - 1);
-  employerDespair = clampDespair(employerDespair + getScaledEmployerDespairDelta(state, 0.5));
+  const employerDespair = clampDespair(
+    state.employerDespair + getScaledEmployerDespairDelta(state, economyConfig.employerDespairPerClick),
+  );
 
   return {
     message: pickRandom(CANCELLED_MESSAGES(pending.roleNumber)),
     type: 'rejection',
     state: checkGameOver({ ...state, employer, employerDespair }),
   };
-}
-
-export function processPendingRolePosts(
-  pendingPosts: PendingRolePost[],
-  state: GameState,
-): {
-  state: GameState;
-  events: Array<{ message: string; type: FeedEvent['type'] }>;
-  remaining: PendingRolePost[];
-}
-{
-  const events: Array<{ message: string; type: FeedEvent['type'] }> = [];
-  let currentState = state;
-  const remaining: PendingRolePost[] = [];
-
-  for (const pending of pendingPosts)
-  {
-    const nextTicks = pending.ticksRemaining - 1;
-
-    if (nextTicks <= 0)
-    {
-      const resolution = resolvePostedRole(pending, currentState);
-      currentState = resolution.state;
-      events.push({ message: resolution.message, type: resolution.type });
-      continue;
-    }
-
-    remaining.push({ ...pending, ticksRemaining: nextTicks });
-  }
-
-  return { state: currentState, events, remaining };
 }

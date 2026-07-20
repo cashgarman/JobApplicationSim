@@ -6,7 +6,6 @@ import {
 } from './constants';
 import { scheduleApplication, type PendingApplication } from './applicationProcess';
 import {
-  applyDespairTick,
   checkGameOver,
   clampDespair,
   getAiSpendPerSec,
@@ -15,9 +14,9 @@ import {
   getRevenueDrainPerSec,
   getSavingsDrainPerSec,
   rollApplicationOutcome,
-  getScaledEmployerDespairDelta,
-  getSeekerClickDespairDelta,
+  getScaledSeekerDespairDelta,
 } from './formulas';
+import { economyConfig } from '../config/economy';
 
 let eventCounter = 0;
 
@@ -82,9 +81,6 @@ export function submitApplication(state: GameState): GameState
       applications: state.seeker.applications + 1,
       savings: Math.max(0, state.seeker.savings - APPLICATION_COST),
     },
-    seekerDespair: clampDespair(
-      state.seekerDespair + getSeekerClickDespairDelta(state),
-    ),
   });
 }
 
@@ -96,9 +92,11 @@ export function resolveApplicationOutcome(state: GameState): {
   const result = rollApplicationOutcome(state);
   const seeker = { ...state.seeker };
   const employer = { ...state.employer };
-  const employerDespair = clampDespair(
-    state.employerDespair + getScaledEmployerDespairDelta(state, result.employerDespairGain),
-  );
+  const seekerDespair = result.outcome === 'rejection'
+    ? clampDespair(
+      state.seekerDespair + getScaledSeekerDespairDelta(state, economyConfig.seekerDespairPerClick),
+    )
+    : state.seekerDespair;
 
   switch (result.outcome)
   {
@@ -123,7 +121,7 @@ export function resolveApplicationOutcome(state: GameState): {
       ...state,
       seeker,
       employer,
-      employerDespair,
+      seekerDespair,
     }),
     result,
   };
@@ -340,7 +338,7 @@ export function tickGame(state: GameState): {
   current = afterDebt;
   events.push(...debtEvents);
 
-  current = checkGameOver(applyDespairTick(current));
+  current = checkGameOver(current);
 
   return { state: current, events, pendingApplications };
 }

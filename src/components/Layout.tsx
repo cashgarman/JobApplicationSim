@@ -11,6 +11,8 @@ import { SeekerColumn } from './SeekerColumn';
 export function Layout()
 {
   const tick = useGameStore((s) => s.tick);
+  const processApplicationQueue = useGameStore((s) => s.processApplicationQueue);
+  const processRolePostQueue = useGameStore((s) => s.processRolePostQueue);
   const resetGame = useGameStore((s) => s.resetGame);
   const pruneExpired = useAnimationStore((s) => s.pruneExpired);
 
@@ -21,17 +23,24 @@ export function Layout()
       tick();
     }, 1000);
 
+    const applicationInterval = setInterval(() =>
+    {
+      processApplicationQueue();
+      processRolePostQueue();
+    }, 100);
+
     const animInterval = setInterval(() =>
     {
       pruneExpired();
-    }, 200);
+    }, 500);
 
     return () =>
     {
       clearInterval(gameInterval);
+      clearInterval(applicationInterval);
       clearInterval(animInterval);
     };
-  }, [tick, pruneExpired]);
+  }, [tick, processApplicationQueue, processRolePostQueue, pruneExpired]);
 
   const handleReset = () =>
   {
@@ -54,7 +63,7 @@ export function Layout()
           <button
             type="button"
             onClick={handleReset}
-            className="shrink-0 self-center rounded border border-corp-border px-3 py-1.5 text-xs text-corp-muted hover:text-corp-red"
+            className="btn-red font-pixel shrink-0 self-center rounded px-3 py-1.5 text-xs uppercase"
             title="Reset save"
           >
             Give Up
@@ -68,7 +77,7 @@ export function Layout()
         </div>
 
         <div className="relative mt-2 min-h-0 flex-1">
-          <div className="grid h-full min-h-0 grid-cols-3 gap-2 lg:gap-3">
+          <div className="grid h-full min-h-0 grid-cols-3 gap-2 lg:gap-3 [&>*]:min-h-0 [&>*]:overflow-hidden">
             <SeekerColumn />
             <AILayerColumn />
             <EmployerColumn />

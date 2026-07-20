@@ -1,8 +1,21 @@
 {
   "screen": {
     "intensity": 0.2,
-    "tickIntervalMs": 520,
-    "corruptBudgetMultiplier": 0.05,
-    "minCorruptBudget": 1
+    "tickIntervalMs": 90,
+    "chaosMultiplier": 0.65,
+    "waveSpawnChance": 0.16,
+    "maxActiveWaves": 2,
+    "waveWidthMin": 2,
+    "waveWidthMax": 4,
+    "waveSpeedMin": 2,
+    "waveSpeedMax": 5,
+    "waveLifetimeMinMs": 400,
+    "waveLifetimeMaxMs": 1200,
+    "waveStutterChance": 0.18,
+    "sporadicBurstChance": 0.07,
+    "sporadicBurstSizeMin": 1,
+    "sporadicBurstSizeMax": 2,
+    "corruptDurationMinMs": 40,
+    "corruptDurationMaxMs": 110
   }
 }

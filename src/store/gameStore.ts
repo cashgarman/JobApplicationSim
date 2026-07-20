@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { economyConfig } from '../config/economy';
 import type { FeedEvent, GameState, Perspective } from '../game/types';
 import {
   EMPLOYER_LOAN_AMOUNT,
@@ -8,15 +9,77 @@ import {
   pickRandom,
 } from '../game/constants';
 import { getGeneratorById, getUpgradeById } from '../game/upgrades';
-import { getUpgradeCost, checkGameOver, clampDespair, getLoanPrincipal, getEmployerClickDespairDelta } from '../game/formulas';
+import { getUpgradeCost, checkGameOver, getLoanPrincipal } from '../game/formulas';
 import { createFeedEvent, createInitialState, outcomeToFeedType, resolveApplicationOutcome, submitApplication, tickGame } from '../game/tick';
-import { processPendingApplications, scheduleApplication, type PendingApplication } from '../game/applicationProcess';
-import { processPendingRolePosts, scheduleRolePost } from '../game/rolePost';
+import { processPendingApplications, scheduleApplication, APPLICATION_ENVELOPE_TRAVEL_MS, type PendingApplication } from '../game/applicationProcess';
+import { activateNextInQueue } from '../game/processingQueue';
+import { processPendingRolePosts as processRolePostQueueItems } from '../game/rolePostProcess';
+import { resolvePostedRole, scheduleRolePost } from '../game/rolePost';
 import type { PendingRolePost } from '../game/rolePost';
 import { getInitialState, saveGame } from '../game/save';
 import { useAnimationStore } from './animationStore';
 
 const MAX_FEED_EVENTS = 50;
+const pendingArrivalTimeouts = new Set<ReturnType<typeof setTimeout>>();
+
+function clearPendingArrivalTimeouts(): void
+{
+  for (const timeoutId of pendingArrivalTimeouts)
+  {
+    clearTimeout(timeoutId);
+  }
+
+  pendingArrivalTimeouts.clear();
+}
+
+function schedulePendingArrival(markArrived: () => void): void
+{
+  const timeoutId = setTimeout(() =>
+  {
+    pendingArrivalTimeouts.delete(timeoutId);
+    markArrived();
+  }, APPLICATION_ENVELOPE_TRAVEL_MS);
+
+  pendingArrivalTimeouts.add(timeoutId);
+}
+
+function markApplicationArrived(
+  get: () => GameStore,
+  set: (partial: Partial<GameStore> | ((state: GameStore) => Partial<GameStore>)) => void,
+  itemId: string,
+): void
+{
+  const current = get();
+  if (!current.pendingApplications.some((item) => item.id === itemId))
+  {
+    return;
+  }
+
+  set({
+    pendingApplications: current.pendingApplications.map((item) =>
+      item.id === itemId ? { ...item, arrivedAt: Date.now() } : item,
+    ),
+  });
+}
+
+function markRolePostArrived(
+  get: () => GameStore,
+  set: (partial: Partial<GameStore> | ((state: GameStore) => Partial<GameStore>)) => void,
+  itemId: string,
+): void
+{
+  const current = get();
+  if (!current.pendingRolePosts.some((item) => item.id === itemId))
+  {
+    return;
+  }
+
+  set({
+    pendingRolePosts: current.pendingRolePosts.map((item) =>
+      item.id === itemId ? { ...item, arrivedAt: Date.now() } : item,
+    ),
+  });
+}
 
 interface GameStore
 {
@@ -24,6 +87,8 @@ interface GameStore
   feedEvents: FeedEvent[];
   pendingRolePosts: PendingRolePost[];
   pendingApplications: PendingApplication[];
+  applicationQueuePulseAt: number;
+  roleQueuePulseAt: number;
   sessionId: number;
   startGame: () => void;
   togglePerspective: () => void;
@@ -34,6 +99,8 @@ interface GameStore
   takeSeekerLoan: () => void;
   takeEmployerLoan: () => void;
   tick: () => void;
+  processApplicationQueue: () => void;
+  processRolePostQueue: () => void;
   resetGame: () => void;
   restartGame: () => void;
 }
@@ -50,6 +117,7 @@ function addFeedEvents(existing: FeedEvent[], newEvents: FeedEvent[]): FeedEvent
 
 function clearPlaythroughLogs(): void
 {
+  clearPendingArrivalTimeouts();
   useAnimationStore.getState().clearAll();
 }
 
@@ -60,6 +128,8 @@ function clearedLogState()
     feedEvents: [] as FeedEvent[],
     pendingRolePosts: [] as PendingRolePost[],
     pendingApplications: [] as PendingApplication[],
+    applicationQueuePulseAt: 0,
+    roleQueuePulseAt: 0,
   };
 }
 
@@ -68,6 +138,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   feedEvents: [],
   pendingRolePosts: [],
   pendingApplications: [],
+  applicationQueuePulseAt: 0,
+  roleQueuePulseAt: 0,
   sessionId: 0,
 
   startGame: () =>
@@ -119,13 +191,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     const state = submitApplication(store.state);
-    const pendingApplications = [
+    const pending = scheduleApplication('click');
+    const { queue } = activateNextInQueue([
       ...store.pendingApplications,
-      scheduleApplication('click'),
-    ];
-    useAnimationStore.getState().spawnApplicationSent();
+      pending,
+    ]);
+
+    useAnimationStore.getState().spawnApplicationSent(pending.id);
+    schedulePendingArrival(() => markApplicationArrived(get, set, pending.id));
+
     persist(state);
-    set({ state, pendingApplications });
+    set({ state, pendingApplications: queue });
   },
 
   clickPostRole: () =>
@@ -147,9 +223,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
         rolesPosted,
         revenue: store.state.employer.revenue + 5,
       },
-      employerDespair: clampDespair(
-        store.state.employerDespair + getEmployerClickDespairDelta(store.state),
-      ),
     });
     const feedEvents = addFeedEvents(store.feedEvents, [
       createFeedEvent(
@@ -157,13 +230,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
         'employer',
       ),
     ]);
-    const pendingRolePosts = [
+    const pending = scheduleRolePost(openRoles, applicantCount);
+    const { queue } = activateNextInQueue([
       ...store.pendingRolePosts,
-      scheduleRolePost(openRoles, applicantCount),
-    ];
-    useAnimationStore.getState().spawnRolePosted();
+      pending,
+    ]);
+
+    useAnimationStore.getState().spawnRolePosted(pending.id);
+    schedulePendingArrival(() => markRolePostArrived(get, set, pending.id));
+
     persist(state);
-    set({ state, feedEvents, pendingRolePosts });
+    set({ state, feedEvents, pendingRolePosts: queue });
   },
 
   buyUpgrade: (upgradeId: string) =>
@@ -221,7 +298,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         employer: {
           ...state.employer,
           revenue: state.employer.revenue - cost,
-          aiRecruitmentSpend: state.employer.aiRecruitmentSpend + cost * 0.5,
+          aiRecruitmentSpend: state.employer.aiRecruitmentSpend + cost * economyConfig.agencyUpgradeAiSpendShare,
           openRoles: state.employer.openRoles + (upgrade.effects.openRoles ?? 0),
           upgradeLevels: {
             ...state.employer.upgradeLevels,
@@ -293,7 +370,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         employer: {
           ...state.employer,
           revenue: state.employer.revenue - cost,
-          aiRecruitmentSpend: state.employer.aiRecruitmentSpend + cost * 0.3,
+          aiRecruitmentSpend: state.employer.aiRecruitmentSpend + cost * economyConfig.agencyGeneratorAiSpendShare,
           generatorLevels: {
             ...state.employer.generatorLevels,
             [generatorId]: currentLevel + 1,
@@ -370,44 +447,107 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     const { state: tickedState, events, pendingApplications: scheduledApplications } = tickGame(store.state);
-    let state = tickedState;
-    const allPendingApplications = [...store.pendingApplications, ...scheduledApplications];
-    const applicationResolution = processPendingApplications(allPendingApplications);
-    const resolvedApplicationEvents: FeedEvent[] = [];
+    const mergedApplications = [...store.pendingApplications, ...scheduledApplications];
+    const { queue } = activateNextInQueue(mergedApplications);
 
-    for (const pending of applicationResolution.resolved)
+    for (const scheduled of scheduledApplications)
     {
-      const resolution = resolveApplicationOutcome(state);
-      state = resolution.state;
-      resolvedApplicationEvents.push(
-        createFeedEvent(resolution.result.message, outcomeToFeedType(resolution.result.outcome)),
-      );
-      useAnimationStore.getState().spawnFromOutcome(resolution.result, {
-        includeApplicationIcon: pending.source === 'auto',
-      });
+      useAnimationStore.getState().spawnApplicationSent(scheduled.id);
+      schedulePendingArrival(() => markApplicationArrived(get, set, scheduled.id));
     }
 
-    const roleResolution = processPendingRolePosts(store.pendingRolePosts, state);
-    const resolvedRoleEvents = roleResolution.events.map((event) =>
-      createFeedEvent(event.message, event.type),
-    );
-    for (const event of roleResolution.events)
-    {
-      if (event.type === 'rejection' || event.type === 'aiInterview')
-      {
-        useAnimationStore.getState().appendEmployerDireFlavor();
-      }
-    }
-    const allNewEvents = [...events, ...resolvedApplicationEvents, ...resolvedRoleEvents];
+    const allNewEvents = events;
     const feedEvents = allNewEvents.length > 0
       ? addFeedEvents(store.feedEvents, allNewEvents)
       : store.feedEvents;
-    persist(roleResolution.state);
+    persist(tickedState);
     set({
-      state: roleResolution.state,
+      state: tickedState,
       feedEvents,
-      pendingRolePosts: roleResolution.remaining,
-      pendingApplications: applicationResolution.remaining,
+      pendingApplications: queue,
+    });
+  },
+
+  processApplicationQueue: () =>
+  {
+    const store = get();
+    if (store.state.phase !== 'playing')
+    {
+      return;
+    }
+
+    const applicationResolution = processPendingApplications(store.pendingApplications);
+    if (!applicationResolution.resolved)
+    {
+      return;
+    }
+
+    let state = store.state;
+    const resolution = resolveApplicationOutcome(state);
+    state = resolution.state;
+    const resolvedApplicationEvents = [
+      createFeedEvent(resolution.result.message, outcomeToFeedType(resolution.result.outcome)),
+    ];
+
+    useAnimationStore.getState().spawnFromOutcome(resolution.result);
+
+    const { queue } = activateNextInQueue(applicationResolution.remaining);
+
+    if (queue.length === 0)
+    {
+      useAnimationStore.getState().clearInboundProcessorIcons();
+    }
+
+    const feedEvents = addFeedEvents(store.feedEvents, resolvedApplicationEvents);
+    persist(state);
+    set({
+      state,
+      feedEvents,
+      pendingApplications: queue,
+      applicationQueuePulseAt: Date.now(),
+    });
+  },
+
+  processRolePostQueue: () =>
+  {
+    const store = get();
+    if (store.state.phase !== 'playing')
+    {
+      return;
+    }
+
+    const roleResolution = processRolePostQueueItems(store.pendingRolePosts);
+    if (!roleResolution.resolved)
+    {
+      return;
+    }
+
+    let state = store.state;
+    const resolution = resolvePostedRole(roleResolution.resolved, state);
+    state = resolution.state;
+    const resolvedRoleEvents = [
+      createFeedEvent(resolution.message, resolution.type),
+    ];
+
+    useAnimationStore.getState().spawnRolePostFromResolution({
+      message: resolution.message,
+      type: resolution.type,
+    });
+
+    const { queue } = activateNextInQueue(roleResolution.remaining);
+
+    if (queue.length === 0)
+    {
+      useAnimationStore.getState().clearInboundRoleProcessorIcons();
+    }
+
+    const feedEvents = addFeedEvents(store.feedEvents, resolvedRoleEvents);
+    persist(state);
+    set({
+      state,
+      feedEvents,
+      pendingRolePosts: queue,
+      roleQueuePulseAt: Date.now(),
     });
   },
 

@@ -1,6 +1,6 @@
 # Job Application Simulator
 
-An idle clicker about the modern hiring market. Two sides of the same broken system fight a war nobody can win — while recruitment agencies, ATS vendors, and AI middlemen invoice everyone.
+An idle clicker about the modern hiring market. Two sides of the same broken system fight a war nobody can win — while AI Recruitment, ATS vendors, and other middlemen invoice everyone.
 
 *Congratulations on finding a job posting for a job that doesn't exist. You're already overqualified for this README.*
 
@@ -13,7 +13,7 @@ The screen is split into three columns:
 | Column | Who | What they do |
 |--------|-----|--------------|
 | **Job Seekers** | You, statistically | Click **Apply** ($4.99 per application). Burn savings. Collect rejections. Occasionally get an AI interview. Almost never get a human one. |
-| **AI / Agencies** | The profitable middle | Routes applications through ATS filters, AI screeners, and agency processing. Takes a cut. Delivers rejection messages with corporate warmth. |
+| **AI Recruitment** | The profitable middle | Routes applications through ATS filters, AI screeners, and automated processing. Takes a cut. Delivers rejection messages with corporate warmth. |
 | **Companies** | Your would-be employer | Click **Post Role**. Spend on AI recruitment tools. Watch open roles pile up and positions go unfilled. |
 
 ### The Loop
