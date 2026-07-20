@@ -27,7 +27,7 @@ export function SeekerColumn()
       <div className="relative z-10 flex h-full min-h-0 flex-col">
         <div className="side-column-header shrink-0 text-center">
           <i className="fa-solid fa-user-tie seeker-droop mb-1 text-2xl text-corp-text lg:text-3xl" />
-          <h2 className="font-pixel text-xs text-corp-green lg:text-sm">Job Seakers</h2>
+          <h2 className="font-pixel text-xs text-corp-green lg:text-sm">Job Seekers</h2>
           <p className="seeker-sigh text-sm text-corp-red lg:text-base">qualified, rejected, billed</p>
         </div>
         <div className="side-column-stats mt-2 shrink-0">
